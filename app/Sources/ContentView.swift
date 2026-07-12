@@ -18,7 +18,12 @@ struct ContentView: View {
             }
             .navigationTitle("Poker Study")
             .navigationDestination(for: StudyTool.self) { tool in
-                ComingSoonView(tool: tool)
+                switch tool {
+                case .pushFold:
+                    PushFoldTrainerView()
+                default:
+                    ComingSoonView(tool: tool)
+                }
             }
         }
     }

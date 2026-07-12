@@ -3,7 +3,7 @@ import Foundation
 /// One of the off-table study tools the app is built around.
 public enum StudyTool: String, CaseIterable, Identifiable, Hashable, Sendable {
     case preflopRanges
-    case icmPushFold
+    case pushFold
     case bankroll
     case handHistoryImport
     case drills
@@ -13,7 +13,7 @@ public enum StudyTool: String, CaseIterable, Identifiable, Hashable, Sendable {
     public var title: String {
         switch self {
         case .preflopRanges: return "Preflop Ranges"
-        case .icmPushFold: return "ICM / Push-Fold Trainer"
+        case .pushFold: return "Push/Fold Trainer"
         case .bankroll: return "Bankroll Tracker"
         case .handHistoryImport: return "Hand History Import & Leaks"
         case .drills: return "Drills"
@@ -24,8 +24,8 @@ public enum StudyTool: String, CaseIterable, Identifiable, Hashable, Sendable {
         switch self {
         case .preflopRanges:
             return "Build and review opening/3-bet/4-bet ranges by position and stack depth."
-        case .icmPushFold:
-            return "Push/fold and calling drills weighted by ICM pressure near the bubble and at final tables."
+        case .pushFold:
+            return "Shove-or-fold decisions for short stacks (~1-20bb), by position and effective stack."
         case .bankroll:
             return "Buy-ins, cashes, ROI, variance, and bankroll-management guardrails for MTTs."
         case .handHistoryImport:
