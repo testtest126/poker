@@ -26,3 +26,22 @@ targets:
         SWIFT_VERSION: "5.9"
         TARGETED_DEVICE_FAMILY: "1"
         GENERATE_INFOPLIST_FILE: YES
+  PokerUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources:
+      - UITests
+    settings:
+      base:
+        SWIFT_VERSION: "5.9"
+        GENERATE_INFOPLIST_FILE: YES
+        TEST_TARGET_NAME: Poker
+schemes:
+  Poker:
+    build:
+      targets:
+        Poker: all
+        PokerUITests: [test]
+    test:
+      targets:
+        - PokerUITests
