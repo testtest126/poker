@@ -1,0 +1,70 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  pokerkit-tests:
+    name: PokerKit — swift test
+    runs-on: macos-15
+    env:
+      # Force the full Xcode toolchain (bundles the Testing framework used by
+      # PokerKit's tests) rather than a bare command-line-tools toolchain.
+      DEVELOPER_DIR: /Applications/Xcode.app/Contents/Developer
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Show toolchain
+        run: |
+          xcodebuild -version
+          swift --version
+
+      - name: Run PokerKit tests
+        working-directory: PokerKit
+        run: swift test
+
+  app-build:
+    name: Poker app — build
+    runs-on: macos-15
+    env:
+      DEVELOPER_DIR: /Applications/Xcode.app/Contents/Developer
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Generate Xcode project
+        working-directory: app
+        run: xcodegen generate
+
+      - name: Select an available iPhone simulator
+        id: simulator
+        run: |
+          # Pick a simulator that actually exists on this runner image rather
+          # than a hardcoded device name (runner images periodically drop/add
+          # specific iPhone models, e.g. "iPhone 16e" has been observed missing).
+          device=$(xcrun simctl list devices available | grep -m 1 -o 'iPhone[^(]*' | sed -e 's/ *$//')
+          if [ -z "$device" ]; then
+            echo "No available iPhone simulator found on this runner" >&2
+            xcrun simctl list devices available >&2
+            exit 1
+          fi
+          echo "Using simulator: $device"
+          echo "device=$device" >> "$GITHUB_OUTPUT"
+
+      - name: Build Poker app
+        working-directory: app
+        run: |
+          xcodebuild build \
+            -scheme Poker \
+            -project Poker.xcodeproj \
+            -destination "platform=iOS Simulator,name=${{ steps.simulator.outputs.device }}"
