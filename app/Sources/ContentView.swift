@@ -21,6 +21,8 @@ struct ContentView: View {
                 switch tool {
                 case .pushFold:
                     PushFoldTrainerView()
+                case .bankroll:
+                    BankrollTrackerView()
                 default:
                     ComingSoonView(tool: tool)
                 }
