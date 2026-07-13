@@ -19,6 +19,15 @@ struct HandHistoryImportView: View {
             .listRowBackground(Color.clear)
             .listRowSeparator(.hidden)
 
+            Section {
+                NavigationLink {
+                    LeakAnalysisView()
+                } label: {
+                    Label("View Leak Report", systemImage: "chart.bar.doc.horizontal")
+                }
+                .accessibilityIdentifier("leakReportLink")
+            }
+
             if let summary = lastImportSummary {
                 Section("Last Import") {
                     importSummaryView(summary)
