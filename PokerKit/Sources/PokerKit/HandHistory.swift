@@ -65,6 +65,10 @@ public struct ParsedHand: Sendable, Equatable {
     public let heroNetChips: Decimal
     /// The bounty hero collected this hand for eliminating an opponent, if any (PKO tournaments).
     public let heroBountyWon: Decimal?
+    /// True if the hand reached "*** SHOW DOWN ***" — i.e. at least two players' hole
+    /// cards were revealed. Distinct from `heroSawFlop`: a hand can run to the river
+    /// and still end without a showdown if the last bet takes down the pot uncontested.
+    public let wentToShowdown: Bool
 
     public let rawText: String
 
@@ -84,6 +88,7 @@ public struct ParsedHand: Sendable, Equatable {
         board: [Card],
         heroNetChips: Decimal,
         heroBountyWon: Decimal?,
+        wentToShowdown: Bool,
         rawText: String
     ) {
         self.handId = handId
@@ -101,6 +106,7 @@ public struct ParsedHand: Sendable, Equatable {
         self.board = board
         self.heroNetChips = heroNetChips
         self.heroBountyWon = heroBountyWon
+        self.wentToShowdown = wentToShowdown
         self.rawText = rawText
     }
 

@@ -84,6 +84,7 @@ public enum HandHistoryParser {
         let ante = actions.first(where: { $0.kind == .postAnte })?.amount ?? 0
         let heroNet = computeHeroNet(actions: actions, lines: lines, heroName: dealt.name)
         let heroBounty = computeHeroBounty(lines: lines, heroName: dealt.name)
+        let wentToShowdown = lines.contains { $0.trimmingCharacters(in: .whitespaces).hasPrefix("*** SHOW DOWN ***") }
 
         let hand = ParsedHand(
             handId: header.handId,
@@ -101,6 +102,7 @@ public enum HandHistoryParser {
             board: board,
             heroNetChips: heroNet,
             heroBountyWon: heroBounty,
+            wentToShowdown: wentToShowdown,
             rawText: block
         )
         return .success(hand)
