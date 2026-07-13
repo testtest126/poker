@@ -25,6 +25,8 @@ struct ContentView: View {
                     PushFoldTrainerView()
                 case .bankroll:
                     BankrollTrackerView()
+                case .handHistoryImport:
+                    HandHistoryImportView()
                 default:
                     ComingSoonView(tool: tool)
                 }

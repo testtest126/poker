@@ -7,6 +7,6 @@ struct PokerApp: App {
         WindowGroup {
             ContentView()
         }
-        .modelContainer(for: BankrollEntryRecord.self)
+        .modelContainer(for: [BankrollEntryRecord.self, HandRecord.self])
     }
 }
