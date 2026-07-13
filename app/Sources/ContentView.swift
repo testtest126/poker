@@ -19,6 +19,8 @@ struct ContentView: View {
             .navigationTitle("Poker Study")
             .navigationDestination(for: StudyTool.self) { tool in
                 switch tool {
+                case .preflopRanges:
+                    PreflopRangeView()
                 case .pushFold:
                     PushFoldTrainerView()
                 case .bankroll:
