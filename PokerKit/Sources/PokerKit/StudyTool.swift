@@ -16,7 +16,7 @@ public enum StudyTool: String, CaseIterable, Identifiable, Hashable, Sendable {
         case .pushFold: return "Push/Fold Trainer"
         case .bankroll: return "Bankroll Tracker"
         case .handHistoryImport: return "Hand History Import & Leaks"
-        case .drills: return "Drills"
+        case .drills: return "Practice Your Leaks"
         }
     }
 
@@ -31,7 +31,7 @@ public enum StudyTool: String, CaseIterable, Identifiable, Hashable, Sendable {
         case .handHistoryImport:
             return "Parse PokerStars hand histories and surface your recurring leaks."
         case .drills:
-            return "Short, repeatable off-table exercises built from your own leaks and hand history."
+            return "Push/fold drills weighted toward the exact spots your imported hands show you misplay."
         }
     }
 }

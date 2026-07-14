@@ -27,30 +27,11 @@ struct ContentView: View {
                     BankrollTrackerView()
                 case .handHistoryImport:
                     HandHistoryImportView()
-                default:
-                    ComingSoonView(tool: tool)
+                case .drills:
+                    DrillsView()
                 }
             }
         }
-    }
-}
-
-private struct ComingSoonView: View {
-    let tool: StudyTool
-
-    var body: some View {
-        VStack(spacing: 12) {
-            Text(tool.title)
-                .font(.title2)
-                .bold()
-            Text(tool.summary)
-                .foregroundStyle(.secondary)
-            Text("Coming soon")
-                .font(.caption)
-                .foregroundStyle(.tertiary)
-        }
-        .padding()
-        .navigationTitle(tool.title)
     }
 }
 

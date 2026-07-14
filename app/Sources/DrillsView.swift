@@ -1,19 +1,31 @@
 import SwiftUI
+import SwiftData
 import PokerKit
 
-struct PushFoldTrainerView: View {
+/// The push/fold trainer, but weighted toward the position/stack region where the
+/// user's own imported hands show them deviating from `PushFoldRange` most. Falls back
+/// to the same fully-random practice as the plain trainer when there isn't enough
+/// imported data to identify a leak.
+struct DrillsView: View {
+    @Query private var records: [HandRecord]
+
+    @State private var focus: DrillFocus?
+    @State private var hasImportedHands = false
+    @State private var hasComputedFocus = false
+
     @State private var spot = PushFoldSpot.random()
     @State private var answer: PushFoldAction?
     @State private var sessionCorrect = 0
     @State private var sessionTotal = 0
 
     private var decision: PushFoldDecision { spot.decision }
-    private var isAnswered: Bool { answer != nil }
     private var isCorrect: Bool { answer == decision.action }
 
     var body: some View {
         ScrollView {
             VStack(spacing: 24) {
+                focusHeader
+
                 scoreHeader
 
                 spotCard
@@ -26,9 +38,58 @@ struct PushFoldTrainerView: View {
             }
             .padding()
         }
-        .navigationTitle("Push/Fold Trainer")
+        .navigationTitle("Practice Your Leaks")
         .navigationBarTitleDisplayMode(.inline)
+        .onAppear(perform: computeFocusIfNeeded)
     }
+
+    // MARK: - Focus
+
+    private func computeFocusIfNeeded() {
+        guard !hasComputedFocus else { return }
+        hasComputedFocus = true
+
+        let parsedHands = records.compactMap { HandHistoryParser.parse($0.rawText).hands.first }
+        hasImportedHands = !parsedHands.isEmpty
+        if hasImportedHands {
+            focus = DrillGenerator.focus(from: LeakAnalysisEngine.analyze(hands: parsedHands))
+        }
+        spot = DrillGenerator.spot(focus: focus)
+    }
+
+    private var focusHeader: some View {
+        HStack(alignment: .top, spacing: 10) {
+            Image(systemName: focusIconName)
+                .foregroundStyle(focusIconTint)
+            Text(focusMessage)
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding()
+        .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 12))
+        .accessibilityIdentifier("drillFocusHeader")
+    }
+
+    private var focusMessage: String {
+        if let focus {
+            return focus.explanation
+        } else if hasImportedHands {
+            return "No push/fold deviations found in your imported hands yet — showing general practice."
+        } else {
+            return "Import hand histories to personalize this drill to your own leaks. Showing general practice for now."
+        }
+    }
+
+    private var focusIconName: String {
+        focus != nil ? "target" : (hasImportedHands ? "checkmark.seal" : "info.circle")
+    }
+
+    private var focusIconTint: Color {
+        focus != nil ? .orange : (hasImportedHands ? .green : .secondary)
+    }
+
+    // MARK: - Session
 
     private var scoreHeader: some View {
         HStack {
@@ -156,32 +217,14 @@ struct PushFoldTrainerView: View {
     }
 
     private func nextHand() {
-        spot = PushFoldSpot.random()
+        spot = DrillGenerator.spot(focus: focus)
         answer = nil
-    }
-}
-
-struct CardView: View {
-    let card: Card
-
-    private var isRed: Bool { card.suit == .hearts || card.suit == .diamonds }
-
-    var body: some View {
-        VStack(spacing: 2) {
-            Text(card.rank.symbol)
-                .font(.system(size: 28, weight: .bold, design: .rounded))
-            Text(card.suit.symbol)
-                .font(.system(size: 22))
-        }
-        .foregroundStyle(isRed ? Color.red : Color.primary)
-        .frame(width: 64, height: 84)
-        .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 10))
-        .overlay(RoundedRectangle(cornerRadius: 10).strokeBorder(.separator))
     }
 }
 
 #Preview {
     NavigationStack {
-        PushFoldTrainerView()
+        DrillsView()
     }
+    .modelContainer(for: HandRecord.self, inMemory: true)
 }
