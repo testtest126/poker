@@ -59,3 +59,8 @@ hand histories and stats are personal and stay local.
   tools. Buildable and tested from commit one.
 - **`app/`** — the SwiftUI iPhone app. Built in Xcode via `app/project.yml`
   (XcodeGen); depends on `PokerKit`.
+
+See **[ai-docs/](ai-docs/README.md)** for a per-subsystem breakdown (ranges,
+hand-history parsing, leak analysis, drills) and **[AGENTS.md](AGENTS.md)**
+for build/test/run commands — both written to get an agent or a returning
+dev oriented fast.
