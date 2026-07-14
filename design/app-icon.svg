@@ -1,0 +1,18 @@
+<svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="40%" r="75%"><stop offset="0%" stop-color="#12332a"/><stop offset="55%" stop-color="#0c211b"/><stop offset="100%" stop-color="#050d0b"/></radialGradient>
+    <linearGradient id="silver" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#ffffff"/><stop offset="55%" stop-color="#dfe4e6"/><stop offset="100%" stop-color="#aab4b8"/></linearGradient>
+    <radialGradient id="glow" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="#e9f2ee" stop-opacity="0.22"/><stop offset="100%" stop-color="#e9f2ee" stop-opacity="0"/></radialGradient>
+    <radialGradient id="vig" cx="50%" cy="50%" r="62%"><stop offset="60%" stop-color="#000000" stop-opacity="0"/><stop offset="100%" stop-color="#000000" stop-opacity="0.55"/></radialGradient>
+    <filter id="drop"><feDropShadow dx="0" dy="10" stdDeviation="18" flood-color="#000000" flood-opacity="0.55"/></filter>
+  </defs>
+  <rect width="1024" height="1024" fill="url(#bg)"/>
+  <circle cx="512" cy="486" r="300" fill="url(#glow)"/>
+  <g transform="translate(150 150) scale(7.24)" filter="url(#drop)">
+    <path d="M50 12 C 50 12, 18 44, 18 63 C 18 78, 31 84, 42 79 C 40 88, 35 93, 28 95 L 72 95 C 65 93, 60 88, 58 79 C 69 84, 82 78, 82 63 C 82 44, 50 12, 50 12 Z" fill="url(#silver)"/>
+  </g>
+  <rect x="392" y="812" width="240" height="6" rx="3" fill="#c9a24a" opacity="0.85"/>
+  <circle cx="392" cy="815" r="7" fill="#c9a24a"/>
+  <circle cx="632" cy="815" r="7" fill="#c9a24a"/>
+  <rect width="1024" height="1024" fill="url(#vig)"/>
+</svg>
