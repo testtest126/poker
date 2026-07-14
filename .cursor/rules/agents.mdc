@@ -1,0 +1,9 @@
+---
+description: Project working agreement — always applied
+alwaysApply: true
+---
+
+The conventions for this repository live in `AGENTS.md` at the root. Follow it:
+the build / test / run commands, the code conventions, and the working agreement
+(verify don't assume; silence is never consent; green at your branch is not green
+at the merge; no secrets or personal data in the repo).

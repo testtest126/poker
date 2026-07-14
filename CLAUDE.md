@@ -2,6 +2,11 @@
 
 Lean, deliberately. This is a solo project; keep the rigor, skip the ceremony.
 
+For build/test/run commands, code layout, and the general working agreement,
+see **[AGENTS.md](AGENTS.md)** — the entry point most AI tools read. This file
+holds the principles specific to *this* project that AGENTS.md points back to.
+For how each subsystem actually works, see **[ai-docs/](ai-docs/README.md)**.
+
 ## 1. Off-table only, non-negotiable
 
 This app is study/prep software, not a real-time assistant. It never reads live
