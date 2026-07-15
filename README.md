@@ -9,7 +9,7 @@ common spots, and drills you on those specifically.
 <p>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="MIT license"></a>
   <img src="https://img.shields.io/badge/platform-iOS%2017%2B-lightgrey.svg" alt="iOS 17+">
-  <img src="https://img.shields.io/badge/status-early%20scaffold-8a1f1f.svg" alt="early scaffold">
+  <img src="https://img.shields.io/badge/status-core%20toolset%20shipped-2ea44f.svg" alt="core toolset shipped">
 </p>
 
 ## Off-table only — this is not a real-time assistant
@@ -29,24 +29,36 @@ histories, find your actual leaks (not generic ones), and drill the specific
 spots you get wrong — preflop ranges, ICM/bubble decisions, push/fold — with a
 bankroll tracker to keep the whole thing honest.
 
-## Planned features
+## What's built
 
-- **Personalized preflop ranges** — build and review opening/3-bet/4-bet ranges
-  by position and stack depth; compare your actual play against them.
-- **ICM / bubble trainer** — push/fold and calling drills weighted by ICM
-  pressure near the bubble and at final tables.
-- **Bankroll tracker** — buy-ins, cashes, ROI, variance, and simple
-  bankroll-management guardrails for MTTs.
-- **Hand-history import & leak-finding** — parse PokerStars hand histories,
-  surface recurring mistakes (e.g. over-folding to 3-bets, wrong push/fold
-  spots), and turn them into targeted drills.
-- **Drills** — short, repeatable off-table exercises built from your own leaks
-  and hand history, not a generic quiz bank.
+Five tools, wired up and live in the app today:
+
+- **Preflop Ranges** — a 13×13 grid viewer of push/fold shove ranges by
+  position and effective stack depth (not yet a full opening/3-bet/4-bet
+  range builder — see Roadmap).
+- **Push/Fold Trainer** — shove-or-fold drills for short stacks (~1–20bb), by
+  position and effective stack.
+- **Hand History Import & Leaks** — parse PokerStars hand-history exports and
+  surface a leak report (VPIP/PFR/limp tendencies, push/fold adherence,
+  ranked findings).
+- **Practice Your Leaks** — push/fold drills weighted toward the exact spots
+  your imported hands show you misplay.
+- **Bankroll Tracker** — buy-ins, cashes, ROI, and win-rate across logged
+  sessions.
+
+All of the above are backed by a tested `PokerKit` domain layer (83 passing
+tests) and a green CI pipeline (`.github/workflows/ci.yml`) that runs the
+`PokerKit` test suite and builds the iOS app on every push and PR. See
+**[ROADMAP.md](ROADMAP.md)** for what's next (ICM/bankroll depth, a
+spaced-repetition drill engine, and polish on the above) and
+**[ai-docs/](ai-docs/README.md)** for how each tool actually works under the
+hood.
 
 ## Status
 
-Early scaffold. The app currently shows a placeholder home screen listing the
-tools above; none are implemented yet.
+Core toolset shipped and in active development — not a finished product, but
+past the scaffold stage: every tool listed above is implemented, tested, and
+reachable from the app's home screen.
 
 ## Tech
 
