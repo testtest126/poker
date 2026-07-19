@@ -36,4 +36,13 @@ public enum PreflopGrid {
             row.map { PushFoldRange.decide(hand: $0, position: position, effectiveStackBB: effectiveStackBB) }
         }
     }
+
+    /// The opening (raise-first-in) decision for every cell, for a given position and
+    /// effective stack. Same enumeration as `decisions(position:effectiveStackBB:)`, just
+    /// mapped through `OpeningRange` instead of `PushFoldRange`.
+    public static func openingDecisions(position: Position, effectiveStackBB: Double) -> [[OpeningDecision]] {
+        hands.map { row in
+            row.map { OpeningRange.decide(hand: $0, position: position, effectiveStackBB: effectiveStackBB) }
+        }
+    }
 }

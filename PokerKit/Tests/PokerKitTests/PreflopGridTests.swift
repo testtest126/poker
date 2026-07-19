@@ -54,6 +54,26 @@ import Testing
     }
 }
 
+@Test func gridOpeningDecisionsMatchDirectOpeningRangeDecisions() {
+    for row in 0..<PreflopGrid.ranks.count {
+        for col in 0..<PreflopGrid.ranks.count {
+            let hand = PreflopGrid.hands[row][col]
+            let expected = OpeningRange.decide(hand: hand, position: .cutoff, effectiveStackBB: 60)
+            let actual = PreflopGrid.openingDecisions(position: .cutoff, effectiveStackBB: 60)[row][col]
+            #expect(actual.action == expected.action)
+        }
+    }
+}
+
+@Test func aaAlwaysOpensAcrossGrid() {
+    for position in Position.allCases {
+        for stack: Double in [20, 40, 60, 100] {
+            let decisions = PreflopGrid.openingDecisions(position: position, effectiveStackBB: stack)
+            #expect(decisions[0][0].action == .raise, "AA should open from \(position) at \(stack)bb")
+        }
+    }
+}
+
 @Test func sevenTwoOffsuitOnlyShovesAtVeryShortStacks() {
     let sevenIndex = PreflopGrid.ranks.firstIndex(of: .seven)!
     let twoIndex = PreflopGrid.ranks.firstIndex(of: .two)!

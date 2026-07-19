@@ -33,9 +33,11 @@ bankroll tracker to keep the whole thing honest.
 
 Five tools, wired up and live in the app today:
 
-- **Preflop Ranges** — a 13×13 grid viewer of push/fold shove ranges by
-  position and effective stack depth (not yet a full opening/3-bet/4-bet
-  range builder — see Roadmap).
+- **Preflop Ranges** — a 13×13 grid viewer with two modes: push/fold shove
+  ranges for short stacks (~1–20bb), and opening (raise-first-in) ranges for
+  standard stacks (~20–100bb), by position and effective stack. Both are
+  hand-tuned study aids, not solver output — see `ai-docs/RANGES.md` for the
+  source basis. Still no 3-bet/4-bet ranges — see Roadmap.
 - **Push/Fold Trainer** — shove-or-fold drills for short stacks (~1–20bb), by
   position and effective stack.
 - **Hand History Import & Leaks** — parse PokerStars hand-history exports and
@@ -46,7 +48,7 @@ Five tools, wired up and live in the app today:
 - **Bankroll Tracker** — buy-ins, cashes, ROI, and win-rate across logged
   sessions.
 
-All of the above are backed by a tested `PokerKit` domain layer (83 passing
+All of the above are backed by a tested `PokerKit` domain layer (94 passing
 tests) and a green CI pipeline (`.github/workflows/ci.yml`) that runs the
 `PokerKit` test suite and builds the iOS app on every push and PR. See
 **[ROADMAP.md](ROADMAP.md)** for what's next (ICM/bankroll depth, a

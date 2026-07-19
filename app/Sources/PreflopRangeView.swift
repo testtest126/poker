@@ -1,18 +1,68 @@
 import SwiftUI
 import PokerKit
 
-struct PreflopRangeView: View {
-    @State private var position: Position = .utg
-    @State private var effectiveStackBB: Double = 10
+/// Which range model the grid is currently rendering: short-stack push/fold
+/// (`PushFoldRange`) or standard-stack opening/raise-first-in (`OpeningRange`). Purely a
+/// view-layer switch — both branches call straight through to `PreflopGrid`, so there's
+/// still exactly one decision per model, never a third opinion invented here.
+private enum RangeMode: String, CaseIterable, Identifiable {
+    case pushFold = "Push/Fold"
+    case opening = "Opening"
 
-    private var decisions: [[PushFoldDecision]] {
-        PreflopGrid.decisions(position: position, effectiveStackBB: effectiveStackBB)
+    var id: String { rawValue }
+
+    var stackRange: ClosedRange<Double> {
+        switch self {
+        case .pushFold: return 1...20
+        case .opening: return 20...100
+        }
     }
 
-    private var shovePercentage: Double {
-        let total = decisions.reduce(0) { $0 + $1.count }
-        let shoves = decisions.reduce(0) { $0 + $1.filter { $0.action == .push }.count }
-        return Double(shoves) / Double(total) * 100
+    var defaultStack: Double {
+        switch self {
+        case .pushFold: return 10
+        case .opening: return 50
+        }
+    }
+
+    var actionLabel: String {
+        switch self {
+        case .pushFold: return "Shove"
+        case .opening: return "Raise"
+        }
+    }
+
+    var summarySuffix: String {
+        switch self {
+        case .pushFold: return "% of hands to shove"
+        case .opening: return "% of hands to open"
+        }
+    }
+}
+
+struct PreflopRangeView: View {
+    @State private var mode: RangeMode = .pushFold
+    @State private var position: Position = .utg
+    @State private var effectiveStackBB: Double = RangeMode.pushFold.defaultStack
+
+    /// Whether each of the 169 grid cells is the "aggressive" action (shove, or open) for
+    /// the current mode/position/stack — the grid only needs this boolean to render, so
+    /// the two decision types (`PushFoldDecision`/`OpeningDecision`) never have to meet.
+    private var isAggressiveGrid: [[Bool]] {
+        switch mode {
+        case .pushFold:
+            return PreflopGrid.decisions(position: position, effectiveStackBB: effectiveStackBB)
+                .map { row in row.map { $0.action == .push } }
+        case .opening:
+            return PreflopGrid.openingDecisions(position: position, effectiveStackBB: effectiveStackBB)
+                .map { row in row.map { $0.action == .raise } }
+        }
+    }
+
+    private var actionPercentage: Double {
+        let flat = isAggressiveGrid.flatMap { $0 }
+        guard !flat.isEmpty else { return 0 }
+        return Double(flat.filter { $0 }.count) / Double(flat.count) * 100
     }
 
     var body: some View {
@@ -31,6 +81,17 @@ struct PreflopRangeView: View {
 
     private var controls: some View {
         VStack(alignment: .leading, spacing: 16) {
+            Picker("Range", selection: $mode) {
+                ForEach(RangeMode.allCases) { mode in
+                    Text(mode.rawValue).tag(mode)
+                }
+            }
+            .pickerStyle(.segmented)
+            .accessibilityIdentifier("rangeModePicker")
+            .onChange(of: mode) { _, newMode in
+                effectiveStackBB = newMode.defaultStack
+            }
+
             Picker("Position", selection: $position) {
                 ForEach(Position.allCases) { position in
                     Text(position.rawValue).tag(position)
@@ -50,14 +111,14 @@ struct PreflopRangeView: View {
                         .monospacedDigit()
                         .accessibilityIdentifier("stackValue")
                 }
-                Slider(value: $effectiveStackBB, in: 1...20, step: 1)
+                Slider(value: $effectiveStackBB, in: mode.stackRange, step: 1)
                     .accessibilityIdentifier("stackSlider")
             }
         }
     }
 
     private var summary: some View {
-        Text("\(String(format: "%.0f", shovePercentage))% of hands")
+        Text("\(String(format: "%.0f", actionPercentage))\(mode.summarySuffix)")
             .font(.subheadline.bold())
             .foregroundStyle(.secondary)
             .accessibilityIdentifier("shovePercentageText")
@@ -76,24 +137,23 @@ struct PreflopRangeView: View {
     }
 
     private func cell(row: Int, col: Int) -> some View {
-        let decision = decisions[row][col]
         let notation = PreflopGrid.notation(row: row, col: col)
-        let isShove = decision.action == .push
+        let isAggressive = isAggressiveGrid[row][col]
 
         return Text(notation)
             .font(.system(size: 10, weight: .semibold, design: .rounded))
             .minimumScaleFactor(0.6)
             .lineLimit(1)
             .frame(maxWidth: .infinity, minHeight: 24)
-            .background(isShove ? Color.accentColor : Color(.secondarySystemBackground))
-            .foregroundStyle(isShove ? Color.white : Color.secondary)
+            .background(isAggressive ? Color.accentColor : Color(.secondarySystemBackground))
+            .foregroundStyle(isAggressive ? Color.white : Color.secondary)
             .clipShape(RoundedRectangle(cornerRadius: 3))
             .accessibilityIdentifier("cell-\(notation)")
     }
 
     private var legend: some View {
         HStack(spacing: 16) {
-            legendSwatch(color: .accentColor, label: "Shove")
+            legendSwatch(color: .accentColor, label: mode.actionLabel)
             legendSwatch(color: Color(.secondarySystemBackground), label: "Fold")
         }
         .font(.caption)

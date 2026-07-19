@@ -23,7 +23,7 @@ public enum StudyTool: String, CaseIterable, Identifiable, Hashable, Sendable {
     public var summary: String {
         switch self {
         case .preflopRanges:
-            return "Build and review opening/3-bet/4-bet ranges by position and stack depth."
+            return "Opening (raise-first-in) ranges for standard stacks, plus push/fold shove ranges for short stacks — by position and effective stack."
         case .pushFold:
             return "Shove-or-fold decisions for short stacks (~1-20bb), by position and effective stack."
         case .bankroll:

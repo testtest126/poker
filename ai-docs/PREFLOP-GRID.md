@@ -6,10 +6,11 @@ Source: `PokerKit/Sources/PokerKit/PreflopGrid.swift`. Tests:
 
 ## What it does
 
-Enumerates the classic 13×13 starting-hand grid and lays out push/fold
-decisions across it. It is purely an enumeration/layout helper — it
+Enumerates the classic 13×13 starting-hand grid and lays out push/fold and
+opening decisions across it. It is purely an enumeration/layout helper — it
 introduces no new range model, reusing `PushFoldRange.decide` and
-`ChenScore` (`RANGES.md`) for every cell's actual decision.
+`OpeningRange.decide` (both backed by `ChenScore` — see `RANGES.md`) for
+every cell's actual decision.
 
 ## Layout convention
 
@@ -28,12 +29,22 @@ hands, each represented once).
 ## `decisions(position:effectiveStackBB:) -> [[PushFoldDecision]]`
 
 Maps `PushFoldRange.decide(hand:position:effectiveStackBB:)` over every cell
-of `hands`, indexed `[row][col]` to match. This is the only function the app
-calls — `PreflopRangeView` renders one `Color.accentColor` (shove) or
-`Color(.secondarySystemBackground)` (fold) cell per decision, with a position
-picker and a stack slider (1–20bb) driving the two parameters live.
+of `hands`, indexed `[row][col]` to match.
 
-`gridDecisionsMatchDirectPushFoldRangeDecisions` (test) is the load-bearing
-guarantee here: every grid cell's decision is required to exactly match
-calling `PushFoldRange.decide` directly for that same hand/position/stack —
-the grid is not allowed to drift into its own logic.
+## `openingDecisions(position:effectiveStackBB:) -> [[OpeningDecision]]`
+
+Same shape, mapping `OpeningRange.decide(hand:position:effectiveStackBB:)`
+instead. `PreflopRangeView` has a "Push/Fold" vs. "Opening" segmented control
+that picks which of these two functions backs the grid, plus a position
+picker and a stack slider (1–20bb for push/fold, 20–100bb for opening)
+driving the shared parameters live. Both render one `Color.accentColor`
+(shove/raise) or `Color(.secondarySystemBackground)` (fold) cell per
+decision — the view only cares about `action == .push` / `action == .raise`,
+never the two decision types at once.
+
+`gridDecisionsMatchDirectPushFoldRangeDecisions` and
+`gridOpeningDecisionsMatchDirectOpeningRangeDecisions` (tests) are the
+load-bearing guarantee here: every grid cell's decision is required to
+exactly match calling the corresponding model directly for that same
+hand/position/stack — the grid is not allowed to drift into its own logic for
+either model.
