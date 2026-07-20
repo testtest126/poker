@@ -45,4 +45,32 @@ public enum PreflopGrid {
             row.map { OpeningRange.decide(hand: $0, position: position, effectiveStackBB: effectiveStackBB) }
         }
     }
+
+    /// The call/fold decision for every cell, for a given caller facing a shove from a
+    /// given position — `nil` if `caller` couldn't actually be facing that shove (see
+    /// `CallingRange.callPercentage`).
+    public static func callingDecisions(
+        caller: DefendingPosition,
+        shover: Position,
+        effectiveStackBB: Double
+    ) -> [[CallVsShoveDecision]]? {
+        guard caller.actionOrderIndex > shover.actionOrderIndex else { return nil }
+        return hands.map { row in
+            row.map { CallingRange.decideVsShove(hand: $0, caller: caller, shover: shover, effectiveStackBB: effectiveStackBB)! }
+        }
+    }
+
+    /// The fold/call/3-bet decision for every cell, for a given defender facing an open
+    /// from a given position — `nil` if `defender` couldn't actually be facing that open
+    /// (see `CallingRange.totalDefensePercentage`).
+    public static func openDefenseDecisions(
+        defender: DefendingPosition,
+        opener: Position,
+        effectiveStackBB: Double
+    ) -> [[OpenDefenseDecision]]? {
+        guard defender.actionOrderIndex > opener.actionOrderIndex else { return nil }
+        return hands.map { row in
+            row.map { CallingRange.decideVsOpen(hand: $0, defender: defender, opener: opener, effectiveStackBB: effectiveStackBB)! }
+        }
+    }
 }
