@@ -14,6 +14,12 @@ Two range models live here, covering two different stack regimes of an MTT:
 Both are **hand-tuned study aids, not solver output** — see each section
 below for what "hand-tuned" means and where the numbers come from.
 
+`PushFoldRange` also has an optional PKO **bounty-adjusted** overlay —
+`BountyEquity` — that widens its shove percentage when hero covers a bountied
+villain, without modifying `PushFoldRange` itself. See **[BOUNTY.md](BOUNTY.md)**
+for the formula and its sources; not repeated here since it's a layer on top
+of this document's models, not a third one.
+
 ## Push/Fold
 
 An **unopened-pot, short-stack push/fold decision**: hero is first to act (or
