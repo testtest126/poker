@@ -256,6 +256,69 @@ public enum Equity {
         monteCarlo(hero: heroRange, villain: villainRange, board: board, iterations: iterations, seed: seed)
     }
 
+    // MARK: - Exact: range vs. range
+
+    /// Exact combo-weighted win/tie/lose equity between two ranges — no sampling error, but
+    /// only tractable when the board isn't empty. Enumerates every valid (non-overlapping)
+    /// combo pair across `heroRange`/`villainRange` and, for each pair, exactly enumerates
+    /// every board completion via `headsUp`, then averages equally across pairs.
+    ///
+    /// **Why averaging pairs equally is correct, not an approximation:** for a *fixed* board
+    /// state (preflop, or N cards already dealt), every valid combo pair has exactly the same
+    /// number of possible board completions — `C(48,5)` preflop, `C(45,2)` with a flop given,
+    /// and so on — regardless of which specific cards the pair uses (as long as none overlap).
+    /// So a uniform average across combo pairs *is* the true combo-weighted equity, the same
+    /// quantity `canonicalVsCanonical`'s Monte Carlo sampling estimates — this function
+    /// computes it exactly instead of sampling it.
+    ///
+    /// **Tractability**: cost is `(valid combo pairs) × (boards per pair)`. Boards per pair is
+    /// cheap postflop (990 with a flop given, 44 with a turn, 1 with a river) but preflop's
+    /// 1,712,304 makes even a handful of combo pairs prohibitively slow — see `EQUITY.md`'s
+    /// performance note. Callers needing an interactive response should keep this to postflop
+    /// board states; there's no automatic guard here against calling it preflop, since
+    /// "prohibitively slow" is a caller-specific judgment (a one-time analysis script has very
+    /// different patience than a UI button), not something this function can arbitrate.
+    public static func exactRangeVsRange(heroRange: [HoleCards], villainRange: [HoleCards], board: [Card] = []) -> EquityResult {
+        precondition(!heroRange.isEmpty && !villainRange.isEmpty, "both ranges must be non-empty")
+
+        var winSum = 0.0, tieSum = 0.0, loseSum = 0.0
+        var totalBoardEvaluations = 0
+        var validPairs = 0
+
+        for heroHand in heroRange {
+            for villainHand in villainRange {
+                let combined = Set([heroHand.first, heroHand.second, villainHand.first, villainHand.second])
+                guard combined.count == 4 else { continue } // combo pair shares a card — can't both be dealt
+
+                let pairResult = headsUp(hero: heroHand, villain: villainHand, board: board)
+                winSum += pairResult.winRate
+                tieSum += pairResult.tieRate
+                loseSum += pairResult.loseRate
+                totalBoardEvaluations += pairResult.trials
+                validPairs += 1
+            }
+        }
+
+        guard validPairs > 0 else {
+            return EquityResult(winRate: 0, tieRate: 0, loseRate: 0, trials: 0, isExact: true)
+        }
+
+        return EquityResult(
+            winRate: winSum / Double(validPairs),
+            tieRate: tieSum / Double(validPairs),
+            loseRate: loseSum / Double(validPairs),
+            trials: totalBoardEvaluations,
+            isExact: true
+        )
+    }
+
+    /// Exact combo-weighted equity between two canonical hand notations — the exact
+    /// counterpart to `canonicalVsCanonical`'s Monte Carlo sampling. See
+    /// `exactRangeVsRange`'s tractability note before calling this with an empty board.
+    public static func exactCanonicalVsCanonical(_ hero: String, _ villain: String, board: [Card] = []) -> EquityResult {
+        exactRangeVsRange(heroRange: expandCanonical(hero), villainRange: expandCanonical(villain), board: board)
+    }
+
     // MARK: - Combinatorics helper
 
     /// Calls `action` once per combination of `k` cards chosen from `pool`, backtracking
