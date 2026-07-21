@@ -45,26 +45,30 @@ private enum RangeMode: String, CaseIterable, Identifiable {
     }
 }
 
-/// A cell's visual role — collapses all four models' distinct action types (push/raise/
-/// call/3-bet/fold) down to what the grid actually needs to render. `.secondary` is only
-/// ever produced by `.vsOpen` ("call" as distinct from "3-bet"); every other mode only
-/// produces `.primary`/`.fold`.
+/// A cell's visual role — collapses every mode's distinct action types (push/raise/call/
+/// 3-bet/fold), plus the Push/Fold bounty overlay, down to what the grid actually needs to
+/// render. `.secondary` is only ever produced by `.vsOpen` ("call" as distinct from
+/// "3-bet"); `.bountyOnly` is only ever produced by the Push/Fold bounty overlay (a hand
+/// that folds in the base chip-EV model but shoves once the bounty is accounted for) — the
+/// two never appear together, since the bounty overlay only exists in Push/Fold mode.
 private enum CellStyle {
     case primary
     case secondary
+    case bountyOnly
     case fold
 
     var color: Color {
         switch self {
         case .primary: return .accentColor
         case .secondary: return .teal
+        case .bountyOnly: return .orange
         case .fold: return Color(.secondarySystemBackground)
         }
     }
 
     var textColor: Color {
         switch self {
-        case .primary, .secondary: return .white
+        case .primary, .secondary, .bountyOnly: return .white
         case .fold: return .secondary
         }
     }
@@ -77,6 +81,14 @@ struct PreflopRangeView: View {
     @State private var heroPosition: DefendingPosition = .bigBlind
     @State private var effectiveStackBB: Double = RangeMode.pushFold.defaultStack
 
+    // PKO bounty overlay — Push/Fold mode only (see BountyEquity/BOUNTY.md). Left off by
+    // default so the base chip-EV grid is what a user sees unless they opt in.
+    @State private var bountyEnabled = false
+    @State private var bountyBB: Double = 20
+    @State private var heroCoversVillain = true
+
+    private var isBountyActive: Bool { mode == .pushFold && bountyEnabled }
+
     /// `DefendingPosition`s that could plausibly be facing `opponentPosition` — anyone who
     /// acts after them at an unopened table. The big blind is always valid, so it's a safe
     /// fallback default no matter what `opponentPosition` is.
@@ -84,11 +96,42 @@ struct PreflopRangeView: View {
         DefendingPosition.allCases.filter { $0.actionOrderIndex > opponentPosition.actionOrderIndex }
     }
 
+    /// Whether each of the 169 grid cells is `PushFoldRange`'s own push/fold action —
+    /// ignoring any bounty overlay. Only actually used in Push/Fold mode, but cheap enough
+    /// (169 cells) that computing it unconditionally isn't worth guarding.
+    private var baseIsAggressiveGrid: [[Bool]] {
+        PreflopGrid.decisions(position: position, effectiveStackBB: effectiveStackBB)
+            .map { row in row.map { $0.action == .push } }
+    }
+
+    /// Same shape, mapped through `BountyEquity` instead — `nil` unless the bounty overlay
+    /// is actually active, so callers never pay for it otherwise.
+    private var bountyIsAggressiveGrid: [[Bool]]? {
+        guard isBountyActive else { return nil }
+        return PreflopGrid.hands.map { row in
+            row.map { hand in
+                BountyEquity.decide(
+                    hand: hand, position: position, effectiveStackBB: effectiveStackBB,
+                    bountyBB: bountyBB, heroCoversVillain: heroCoversVillain
+                ).action == .push
+            }
+        }
+    }
+
     private var cellStyles: [[CellStyle]] {
+        if let bountyGrid = bountyIsAggressiveGrid {
+            let baseGrid = baseIsAggressiveGrid
+            return baseGrid.indices.map { row in
+                baseGrid[row].indices.map { col in
+                    guard bountyGrid[row][col] else { return .fold }
+                    return baseGrid[row][col] ? .primary : .bountyOnly
+                }
+            }
+        }
+
         switch mode {
         case .pushFold:
-            return PreflopGrid.decisions(position: position, effectiveStackBB: effectiveStackBB)
-                .map { row in row.map { $0.action == .push ? .primary : .fold } }
+            return baseIsAggressiveGrid.map { row in row.map { $0 ? .primary : .fold } }
         case .opening:
             return PreflopGrid.openingDecisions(position: position, effectiveStackBB: effectiveStackBB)
                 .map { row in row.map { $0.action == .raise ? .primary : .fold } }
@@ -121,7 +164,24 @@ struct PreflopRangeView: View {
         Array(repeating: Array(repeating: .fold, count: PreflopGrid.ranks.count), count: PreflopGrid.ranks.count)
     }
 
+    /// Percentage of the 169 cells actually flagged `true` in the given grid — kept
+    /// empirical (counted from the same grid that drives rendering) rather than read off a
+    /// model's raw percentage output directly, so the summary text can never drift out of
+    /// sync with what's on screen (Chen-score ties can make the exact count cross a
+    /// percentile boundary slightly differently than a target percentage would suggest).
+    private func percentage(of grid: [[Bool]]) -> Double {
+        let flat = grid.flatMap { $0 }
+        guard !flat.isEmpty else { return 0 }
+        return Double(flat.filter { $0 }.count) / Double(flat.count) * 100
+    }
+
     private var summaryText: String {
+        if isBountyActive {
+            let base = percentage(of: baseIsAggressiveGrid)
+            let bounty = bountyIsAggressiveGrid.map(percentage(of:)) ?? base
+            return "\(pct(base))% of hands to shove — \(pct(bounty))% with bounty"
+        }
+
         let flat = cellStyles.flatMap { $0 }
         guard !flat.isEmpty else { return "" }
         let total = Double(flat.count)
@@ -129,16 +189,18 @@ struct PreflopRangeView: View {
         let defendPct = Double(defendCount) / total * 100
 
         switch mode {
-        case .pushFold: return "\(String(format: "%.0f", defendPct))% of hands to shove"
-        case .opening: return "\(String(format: "%.0f", defendPct))% of hands to open"
-        case .vsShove: return "\(String(format: "%.0f", defendPct))% of hands to call"
+        case .pushFold: return "\(pct(defendPct))% of hands to shove"
+        case .opening: return "\(pct(defendPct))% of hands to open"
+        case .vsShove: return "\(pct(defendPct))% of hands to call"
         case .vsOpen:
             let threeBetCount = flat.filter { $0 == .primary }.count
             let threeBetPct = Double(threeBetCount) / total * 100
-            return "\(String(format: "%.0f", defendPct))% of hands to defend "
-                + "(\(String(format: "%.0f", threeBetPct))% 3-bet)"
+            return "\(pct(defendPct))% of hands to defend "
+                + "(\(pct(threeBetPct))% 3-bet)"
         }
     }
+
+    private func pct(_ value: Double) -> String { String(format: "%.0f", value) }
 
     var body: some View {
         ScrollView {
@@ -149,6 +211,8 @@ struct PreflopRangeView: View {
                 legend
                 if mode.isDefending {
                     defenseCaveat
+                } else if isBountyActive {
+                    bountyCaveat
                 }
             }
             .padding()
@@ -195,6 +259,37 @@ struct PreflopRangeView: View {
                 }
                 Slider(value: $effectiveStackBB, in: mode.stackRange, step: 1)
                     .accessibilityIdentifier("stackSlider")
+            }
+
+            if mode == .pushFold {
+                bountyControls
+            }
+        }
+    }
+
+    private var bountyControls: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Toggle("PKO Bounty", isOn: $bountyEnabled)
+                .accessibilityIdentifier("bountyToggle")
+
+            if bountyEnabled {
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack {
+                        Text("Bounty")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                        Spacer()
+                        Text("\(Int(bountyBB)) bb")
+                            .font(.headline)
+                            .monospacedDigit()
+                            .accessibilityIdentifier("bountyValue")
+                    }
+                    Slider(value: $bountyBB, in: 0...100, step: 1)
+                        .accessibilityIdentifier("bountySlider")
+                }
+
+                Toggle("You cover villain", isOn: $heroCoversVillain)
+                    .accessibilityIdentifier("heroCoversVillainToggle")
             }
         }
     }
@@ -273,6 +368,9 @@ struct PreflopRangeView: View {
             ForEach(mode.legendEntries, id: \.label) { entry in
                 legendSwatch(color: entry.color, label: entry.label)
             }
+            if isBountyActive {
+                legendSwatch(color: .orange, label: "Shove (bounty only)")
+            }
             legendSwatch(color: Color(.secondarySystemBackground), label: "Fold")
         }
         .font(.caption)
@@ -299,6 +397,18 @@ struct PreflopRangeView: View {
         .foregroundStyle(.secondary)
         .multilineTextAlignment(.center)
         .accessibilityIdentifier("defenseCaveatText")
+    }
+
+    private var bountyCaveat: some View {
+        Text(
+            heroCoversVillain
+            ? "Study aid, not solver output. Chip-EV widened for a collectible bounty only — no ICM, no being-covered risk. See ai-docs/BOUNTY.md."
+            : "You don't cover villain here, so the bounty isn't collectible on this shove — this grid matches the base (no-bounty) range."
+        )
+        .font(.caption)
+        .foregroundStyle(.secondary)
+        .multilineTextAlignment(.center)
+        .accessibilityIdentifier("bountyCaveatText")
     }
 }
 

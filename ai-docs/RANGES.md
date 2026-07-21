@@ -24,6 +24,12 @@ defending models are meaningfully less certain than the two aggressor models
 — see "Facing a shove" and "Facing an open" below for exactly why, and which
 parts of each to trust least.
 
+`PushFoldRange` also has an optional PKO **bounty-adjusted** overlay —
+`BountyEquity` — that widens its shove percentage when hero covers a bountied
+villain, without modifying `PushFoldRange` itself. See **[BOUNTY.md](BOUNTY.md)**
+for the formula and its sources; not repeated here since it's a layer on top
+of this document's models, not a third one.
+
 ## Push/Fold
 
 An **unopened-pot, short-stack push/fold decision**: hero is first to act (or
