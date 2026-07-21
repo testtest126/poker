@@ -225,3 +225,54 @@ private func assertApproximately(_ actual: Double, _ expectedPercent: Double, to
     #expect(result.trials == 10_000)
     #expect(result.winRate > 0.6, "a pair range should dominate an unpaired broadway range")
 }
+
+// MARK: - Exact combo-weighted range vs. range
+
+@Test func exactRangeVsRangeMatchesMonteCarloOnAFlopGivenBoard() {
+    // Postflop, exactRangeVsRange is cheap (990 boards per combo pair) — cross-check it
+    // against the already-validated Monte Carlo path on the same spot. Both should be
+    // measuring the same combo-weighted quantity; exact has zero sampling error, so any
+    // gap here is purely Monte Carlo noise, bounded by its own tolerance.
+    let flop = [Card(rank: .two, suit: .hearts), Card(rank: .seven, suit: .diamonds), Card(rank: .nine, suit: .clubs)]
+    let exact = Equity.exactCanonicalVsCanonical("AKs", "QQ", board: flop)
+    let sampled = Equity.canonicalVsCanonical("AKs", "QQ", board: flop, iterations: 50_000)
+
+    #expect(exact.isExact)
+    assertApproximately(sampled.winRate, exact.winRate * 100, tolerance: 1.5)
+}
+
+@Test func exactRangeVsRangeSkipsOverlappingComboPairs() {
+    // AA vs AA (contrived, but a clean edge case): most of the 6x6=36 combo pairings share a
+    // card (only 4 aces exist total) and must be skipped, not silently miscounted. Uses a
+    // flop-given board to stay fast — preflop would multiply an already-multi-pair
+    // computation by 1,712,304 boards per pair.
+    let aces = Equity.expandCanonical("AA")
+    let flop = [Card(rank: .two, suit: .hearts), Card(rank: .seven, suit: .diamonds), Card(rank: .nine, suit: .clubs)]
+    let result = Equity.exactRangeVsRange(heroRange: aces, villainRange: aces, board: flop)
+    // Every surviving pair splits the same 4 aces between hero and villain — neither side can
+    // ever make quads (all 4 aces are already spoken for), so it's a fundamentally even
+    // matchup: no side should come close to dominating.
+    #expect(result.trials > 0)
+    #expect(result.winRate < 0.85 && result.loseRate < 0.85, "a split-aces matchup shouldn't blow out either way")
+}
+
+@Test func exactRangeVsRangeReportsTotalBoardEvaluationsAsTrials() {
+    // Flop given: 990 boards per valid combo pair. AKs (4 combos) vs QQ (6 combos) has no
+    // card overlap between any pair (different ranks entirely), so all 24 pairs are valid.
+    let flop = [Card(rank: .two, suit: .hearts), Card(rank: .seven, suit: .diamonds), Card(rank: .nine, suit: .clubs)]
+    let result = Equity.exactCanonicalVsCanonical("AKs", "QQ", board: flop)
+    #expect(result.trials == 24 * 990)
+}
+
+@Test func exactRangeVsRangeHandVsHandMatchesHeadsUpDirectly() {
+    // A range containing exactly one combo per side should exactly reproduce headsUp's own
+    // answer — same underlying enumeration, just reached through the range-averaging path.
+    let hero = HoleCards(Card(rank: .ace, suit: .spades), Card(rank: .king, suit: .spades))!
+    let villain = HoleCards(canonical: "QQ")!
+    let flop = [Card(rank: .two, suit: .hearts), Card(rank: .seven, suit: .diamonds), Card(rank: .nine, suit: .clubs)]
+    let direct = Equity.headsUp(hero: hero, villain: villain, board: flop)
+    let viaRange = Equity.exactRangeVsRange(heroRange: [hero], villainRange: [villain], board: flop)
+    #expect(direct.winRate == viaRange.winRate)
+    #expect(direct.tieRate == viaRange.tieRate)
+    #expect(direct.trials == viaRange.trials)
+}

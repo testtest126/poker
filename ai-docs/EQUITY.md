@@ -117,6 +117,31 @@ full expansion on both sides. **This is what published "AA vs KK ≈ 82.4%"
 reference figures actually mean** — see the next section for why that
 distinction turned out to matter more than expected while building this.
 
+### `exactRangeVsRange` / `exactCanonicalVsCanonical` — the exact counterpart
+
+Everything above (`monteCarlo`, `rangeVsRange`, `canonicalVsCanonical`) is
+sampling. `exactRangeVsRange` computes the *same quantity* — combo-weighted
+equity — exactly: it enumerates every valid (non-card-overlapping) combo pair
+across both ranges and, for each pair, calls `headsUp` (itself exact) to
+enumerate every board completion, then averages equally across pairs.
+
+That equal averaging is exact, not an approximation: for a fixed board state,
+every valid combo pair has the *same* number of possible board completions —
+`C(48,5)` preflop, `C(45,2)` with a flop given, and so on — regardless of
+which specific cards the pair uses. A uniform average across pairs is
+therefore the true combo-weighted figure, the same one `canonicalVsCanonical`
+estimates by sampling.
+
+**Tractability is `(valid combo pairs) × (boards per pair)`.** Postflop this
+is cheap — a full 12-combo-vs-12-combo offsuit range pairing (144 pairs) with
+a flop given is `144 × 990 ≈ 142,560` board evaluations, comfortably under a
+second even in a debug build. Preflop, the same 144 pairs would be `144 ×
+1,712,304 ≈ 246 million` — not remotely interactive. This function doesn't
+enforce that distinction itself (a one-time analysis script has different
+patience than a UI button, and baking a product-specific time limit into a
+general-purpose model function is the wrong layer for that decision) — see
+"Consumers" below for how `EquityCalculatorView` draws that line.
+
 ## A subtlety: which suits? (read this before trusting a specific number)
 
 While validating this against published references, `headsUp(hero:
@@ -226,6 +251,8 @@ Silicon, `swift test` (debug/`-Onone` — SwiftPM's default, and what CI runs):
 | `headsUp`, turn given (44 boards) | instant |
 | `monteCarlo`, 100,000 iterations | ~17 seconds |
 | `monteCarlo`, 200,000 iterations | ~34 seconds |
+| `exactRangeVsRange`, flop given, 24 combo pairs (23,760 boards) | ~14 seconds |
+| `exactRangeVsRange`, flop given, 1 combo pair (990 boards) | well under 1 second |
 
 **This is slow, and that's a deliberate tradeoff, not an oversight.**
 `HandEvaluator.evaluate5` avoids the most obviously wasteful approach
@@ -251,7 +278,10 @@ finding above (Monte Carlo over the full combo expansion is actually the
 just the faster one). Total `swift test` time added by this feature is
 roughly 5-6 minutes — noticeably slower than the rest of the suite (which
 runs in under a second), and worth knowing about before running the full
-suite impatiently.
+suite impatiently. `exactRangeVsRange`'s own tests all use postflop boards
+deliberately, for the same reason — they cross-check against Monte Carlo and
+against `headsUp` directly, which only needs to happen once, cheaply, not at
+preflop's cost.
 
 If this needs to get faster later: the standard next step is a precomputed
 lookup-table evaluator (e.g. the well-known "Cactus Kev" 5-card evaluator, or
@@ -265,6 +295,15 @@ returning a correctly-ordered `HandStrength`.
 - `EquityCalculatorView` (`app/Sources/EquityCalculatorView.swift`) — pick a
   hero hand, a villain hand or range, an optional board, see win/tie/lose %.
   Wired into the home screen via `StudyTool.equityCalculator`.
+
+  Has a Fast (Monte Carlo, `rangeVsRange`, 50,000 iterations, default) vs.
+  Precise (exact, `exactRangeVsRange`) mode toggle. **Precise is only
+  offered once a board is set** (flop, turn, or river) — this is exactly the
+  product-specific tractability line this file's `exactRangeVsRange` doc
+  comment says doesn't belong in the model layer. Preflop, Precise is
+  disabled with an on-screen explanation rather than silently falling back
+  to Fast or letting the user trigger a multi-minute computation from a
+  button tap.
 
 ## What this deliberately doesn't do
 

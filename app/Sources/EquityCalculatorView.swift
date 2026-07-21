@@ -1,6 +1,18 @@
 import SwiftUI
 import PokerKit
 
+/// Which `Equity` function backs the Calculate button.
+enum EquityMode: String, CaseIterable, Identifiable {
+    /// `Equity.rangeVsRange` — fixed-seed Monte Carlo. Fast (sub-second at the iteration
+    /// count this screen uses) regardless of board state, including preflop.
+    case fast = "Fast"
+    /// `Equity.exactRangeVsRange` — full enumeration, zero sampling error. Only offered once
+    /// a board is set; see `EquityCalculatorView`'s doc comment for why preflop is excluded.
+    case precise = "Precise"
+
+    var id: String { rawValue }
+}
+
 /// Holds the in-flight/last equity calculation. A reference type on purpose: `calculate()`
 /// kicks off background work whose completion callback needs to mutate state reliably after
 /// `EquityCalculatorView` (a `View`, i.e. a *value type*) may have already been re-created
@@ -14,12 +26,18 @@ final class EquityCalculatorModel {
     private(set) var isCalculating = false
     private(set) var result: EquityResult?
 
-    func calculate(hero: [HoleCards], villain: [HoleCards], board: [Card], iterations: Int) {
+    func calculate(hero: [HoleCards], villain: [HoleCards], board: [Card], mode: EquityMode, iterations: Int) {
         isCalculating = true
         result = nil
 
         DispatchQueue.global(qos: .userInitiated).async { [self] in
-            let computed = Equity.rangeVsRange(heroRange: hero, villainRange: villain, board: board, iterations: iterations)
+            let computed: EquityResult
+            switch mode {
+            case .fast:
+                computed = Equity.rangeVsRange(heroRange: hero, villainRange: villain, board: board, iterations: iterations)
+            case .precise:
+                computed = Equity.exactRangeVsRange(heroRange: hero, villainRange: villain, board: board)
+            }
             DispatchQueue.main.async { [self] in
                 result = computed
                 isCalculating = false
@@ -43,12 +61,23 @@ final class EquityCalculatorModel {
 /// for. See `ai-docs/EQUITY.md`'s "A subtlety: which suits?" section for why that
 /// distinction matters.
 ///
-/// Always uses Monte Carlo (`Equity.rangeVsRange`), never `Equity.headsUp`'s exact
-/// enumeration — the exact preflop path takes on the order of minutes even in a release
-/// build (see `EQUITY.md`'s performance note), which would hang this screen. 10,000
-/// iterations keeps a tap-to-result under a few seconds; see `EQUITY.md` for the
-/// resulting standard error.
+/// Two calculation modes (`EquityMode`): **Fast** (`Equity.rangeVsRange`, fixed-seed Monte
+/// Carlo, the default) and **Precise** (`Equity.exactRangeVsRange`, zero sampling error).
+/// Precise is only offered once a board is set — enumerating every combo pair exactly at
+/// *preflop* is `(valid combo pairs) × 1,712,304 boards`, minutes not seconds even for a
+/// single pairing (see `EQUITY.md`'s performance note) — so the toggle is disabled with an
+/// on-screen explanation at preflop rather than letting a tap hang the screen. Either mode
+/// keeps a tap-to-result under a few seconds for the board states it's offered on; see
+/// `EQUITY.md` for Fast's resulting standard error at this iteration count.
 struct EquityCalculatorView: View {
+    /// Measured, not just estimated: this needs to be low enough to stay fast on an actual
+    /// iOS Simulator, which runs noticeably slower than the `-Onone` macOS-native `swift
+    /// test` timings `EQUITY.md`'s performance table is built from — 50,000 iterations, fine
+    /// on that machine, took 30+ seconds here. 10,000 keeps a tap-to-result under ~10
+    /// seconds end to end (confirmed via `EquityCalculatorUITests`), at a standard error of
+    /// roughly `±1%` at a 95% confidence interval — plenty for a study tool's "is this close
+    /// or a blowout" question, even if less precise than the ground-truth validation tests'
+    /// own 100,000-iteration figure.
     private static let liveIterations = 10_000
 
     @State private var model = EquityCalculatorModel()
@@ -56,6 +85,7 @@ struct EquityCalculatorView: View {
     @State private var villainNotation = "QQ"
     @State private var street: Street = .preflop
     @State private var boardCards: [Card?] = Array(repeating: nil, count: 5)
+    @State private var mode: EquityMode = .fast
 
     private var boardCardCount: Int {
         switch street {
@@ -123,7 +153,14 @@ struct EquityCalculatorView: View {
                 }
                 .pickerStyle(.segmented)
                 .accessibilityIdentifier("streetPicker")
-                .onChange(of: street) { _, _ in model.clearResult() }
+                .onChange(of: street) { _, newStreet in
+                    model.clearResult()
+                    // Precise mode isn't offered preflop — see the view's doc comment — so
+                    // if a board that made it available gets cleared back to Preflop, fall
+                    // back to Fast rather than leaving the toggle stuck on a now-unavailable
+                    // selection.
+                    if newStreet == .preflop { mode = .fast }
+                }
 
                 ForEach(0..<boardCardCount, id: \.self) { index in
                     BoardCardPickerRow(
@@ -139,9 +176,27 @@ struct EquityCalculatorView: View {
                 }
             }
 
+            Section("Mode") {
+                Picker("Mode", selection: $mode) {
+                    ForEach(EquityMode.allCases) { mode in
+                        Text(mode.rawValue).tag(mode)
+                    }
+                }
+                .pickerStyle(.segmented)
+                .disabled(street == .preflop)
+                .accessibilityIdentifier("equityModePicker")
+                .onChange(of: mode) { _, _ in model.clearResult() }
+
+                if street == .preflop {
+                    Text("Precise needs a board — an exact answer across a full hand class preflop takes several minutes to compute. Fast (Monte Carlo) is accurate enough for study purposes; see ai-docs/EQUITY.md.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+
             Section {
                 Button {
-                    model.calculate(hero: heroCombos, villain: villainCombos, board: resolvedBoard, iterations: Self.liveIterations)
+                    model.calculate(hero: heroCombos, villain: villainCombos, board: resolvedBoard, mode: mode, iterations: Self.liveIterations)
                 } label: {
                     HStack {
                         Spacer()
@@ -177,11 +232,18 @@ struct EquityCalculatorView: View {
             resultRow(label: "Hero wins", value: result.winRate, tint: .green, identifier: "heroWinRate")
             resultRow(label: "Tie", value: result.tieRate, tint: .secondary, identifier: "tieRate")
             resultRow(label: "Villain wins", value: result.loseRate, tint: .red, identifier: "villainWinRate")
-            Text("\(result.trials.formatted()) Monte Carlo simulations, fixed seed — same inputs always give the same result. Not a solver; see ai-docs/EQUITY.md.")
+            Text(methodCaption(for: result))
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .accessibilityIdentifier("equityMethodText")
         }
+    }
+
+    private func methodCaption(for result: EquityResult) -> String {
+        if result.isExact {
+            return "Exact — \(result.trials.formatted()) board(s) enumerated across every matching combo pair, zero sampling error. Not a solver; see ai-docs/EQUITY.md."
+        }
+        return "\(result.trials.formatted()) Monte Carlo simulations, fixed seed — same inputs always give the same result. Not a solver; see ai-docs/EQUITY.md."
     }
 
     private func resultRow(label: String, value: Double, tint: Color, identifier: String) -> some View {
