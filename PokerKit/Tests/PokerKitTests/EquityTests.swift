@@ -276,3 +276,60 @@ private func assertApproximately(_ actual: Double, _ expectedPercent: Double, to
     #expect(direct.tieRate == viaRange.tieRate)
     #expect(direct.trials == viaRange.trials)
 }
+
+// MARK: - Postflop ground-truth validation
+//
+// Everything above validates preflop equity against published references. This section
+// does the same job postflop, against the single most rigorously-citable postflop
+// statistic in poker math: a 9-out flush draw's exact completion rate.
+
+@Test func postflopGroundTruthFlushDrawCompletionRate() {
+    // Widely cited across poker literature (the "Rule of 4-and-2"'s exact source figure,
+    // not an approximation of it): a 9-out draw with two cards to come completes
+    // `1 - (38/47) × (37/46) ≈ 34.97%` of the time — exact combinatorics, not an estimate,
+    // so this is checkable independently of any external site or Monte Carlo run.
+    //
+    // Hero holds a naked flush draw — no pair, no straight draw live on this specific flop
+    // (A♠K♠ against 2♠7♠9♣ doesn't connect to a gutshot or open-ender) — so "hero's final
+    // hand is a flush or better" measures exactly the 9-spades-remaining completion rate
+    // the citation describes, isolated from any other way to improve.
+    let hero = HoleCards(Card(rank: .ace, suit: .spades), Card(rank: .king, suit: .spades))!
+    let flop = [Card(rank: .two, suit: .spades), Card(rank: .seven, suit: .spades), Card(rank: .nine, suit: .clubs)]
+
+    let used = Set([hero.first, hero.second] + flop)
+    let remaining = Equity.fullDeck.filter { !used.contains($0) }
+    #expect(remaining.count == 47)
+
+    var completions = 0
+    var total = 0
+    for i in 0..<remaining.count {
+        for j in (i + 1)..<remaining.count {
+            let finalHand = HandEvaluator.bestHand(from: [hero.first, hero.second] + flop + [remaining[i], remaining[j]])
+            if finalHand.category >= .flush { completions += 1 }
+            total += 1
+        }
+    }
+
+    #expect(total == 1081) // C(47, 2)
+    let completionRate = Double(completions) / Double(total) * 100
+    #expect(abs(completionRate - 34.97) < 0.5, "expected ~34.97%, got \(completionRate)%")
+}
+
+@Test func postflopGroundTruthFlushDrawVsSetViaEquityEngine() {
+    // A secondary, end-to-end cross-check through the actual Equity API (not just
+    // HandEvaluator directly): "a set vs. a flush draw is roughly a 75/25 spot" is a
+    // commonly-cited approximate figure (found via web search while building this) — looser
+    // than the exact 34.97% draw-math above, so checked to a wider tolerance. The set can
+    // also improve to a boat/quads and the flush isn't automatically the winner even when it
+    // completes, so this isn't expected to land on exactly 65.03% (100 - 34.97) for hero;
+    // it's a corroborating check that the Equity engine's output is in the right
+    // neighborhood as a published rough figure, not the primary precision claim.
+    let hero = HoleCards(Card(rank: .ace, suit: .spades), Card(rank: .king, suit: .spades))!
+    let villain = HoleCards(Card(rank: .nine, suit: .diamonds), Card(rank: .nine, suit: .hearts))!
+    let flop = [Card(rank: .two, suit: .spades), Card(rank: .seven, suit: .spades), Card(rank: .nine, suit: .clubs)]
+
+    let result = Equity.headsUp(hero: hero, villain: villain, board: flop)
+    #expect(result.isExact)
+    assertApproximately(result.loseRate, 75, tolerance: 5)
+    assertApproximately(result.winRate, 25, tolerance: 5)
+}

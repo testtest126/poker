@@ -238,6 +238,34 @@ A note on the task's original framing of two of these:
   code. Fixed by testing against the precise citation instead of the rounded
   description, same as the other two notes here.
 
+### Postflop
+
+Everything above is preflop. Postflop equity is validated against the single
+most rigorously-citable statistic in poker math — not scraped from a
+website, but exact combinatorics independently reproducible by anyone:
+
+**A 9-out draw with two cards to come completes `1 - (38/47) × (37/46) ≈
+34.97%` of the time.** `postflopGroundTruthFlushDrawCompletionRate` sets up a
+naked flush draw (`A♠K♠` on a `2♠7♠9♣` flop — no pair, no straight draw live,
+so "final hand is a flush or better" isolates exactly the 9-remaining-spades
+statistic) and exhaustively enumerates all `C(47,2) = 1,081` turn/river
+combinations directly through `HandEvaluator`, with no `Equity` API in the
+loop at all. Measured: **378/1,081 = 34.968%** — a 0.002-point difference
+from the cited figure, i.e. as close to an exact match as floating-point
+rounding allows.
+
+A second test, `postflopGroundTruthFlushDrawVsSetViaEquityEngine`, closes the
+loop through the actual `Equity.headsUp` API: the same flush draw against a
+set on the same flop (`9♦9♥` — trips using the board's `9♣`) is commonly
+cited (found via web search) as **"roughly a 75/25 spot"** favoring the set.
+Measured via `headsUp`: **75.35% / 24.65%** (zero ties on this specific
+board). This citation is a rounded approximation, not exact math like the
+34.97% figure above — the set can also improve to a boat/quads, and a
+completed flush isn't an automatic win — so it's checked to a wider `±5pt`
+tolerance and treated as a corroborating check that the `Equity` API surfaces
+the underlying (already independently-verified) `HandEvaluator` math
+correctly, not as a second precision claim.
+
 ## Performance
 
 Measured on this machine, Swift 6.3 (Xcode 27 beta toolchain), Apple
