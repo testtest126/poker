@@ -62,6 +62,61 @@ final class PreflopRangeUITests: XCTestCase {
         attachScreenshot(of: app, name: "bounty-on-not-covering-villain")
     }
 
+    func testFacingShoveModeRendersAndReactsToOpponentChange() {
+        let app = XCUIApplication()
+        app.launch()
+
+        app.staticTexts["Preflop Ranges"].tap()
+
+        app.buttons["Facing Shove"].tap()
+
+        let aaCell = app.staticTexts["cell-AA"]
+        XCTAssertTrue(aaCell.waitForExistence(timeout: 5))
+        attachScreenshot(of: app, name: "facing-shove-utg")
+
+        let summaryText = app.staticTexts["shovePercentageText"]
+        XCTAssertTrue(summaryText.exists)
+        let utgSummary = summaryText.label
+
+        // Both the opponent and hero pickers can show overlapping position labels (e.g.
+        // both may offer "BTN"), so scope the tap to the opponent picker specifically.
+        let opponentPicker = app.segmentedControls["opponentPositionPicker"]
+        XCTAssertTrue(opponentPicker.waitForExistence(timeout: 5))
+        opponentPicker.buttons["BTN"].tap()
+
+        XCTAssertTrue(summaryText.waitForExistence(timeout: 5))
+        XCTAssertNotEqual(summaryText.label, utgSummary)
+        attachScreenshot(of: app, name: "facing-shove-button")
+    }
+
+    func testFacingOpenModeRendersAndReactsToHeroChange() {
+        let app = XCUIApplication()
+        app.launch()
+
+        app.staticTexts["Preflop Ranges"].tap()
+
+        app.buttons["Facing Open"].tap()
+
+        let aaCell = app.staticTexts["cell-AA"]
+        XCTAssertTrue(aaCell.waitForExistence(timeout: 5))
+        attachScreenshot(of: app, name: "facing-open-bb")
+
+        let summaryText = app.staticTexts["shovePercentageText"]
+        XCTAssertTrue(summaryText.exists)
+        let bbSummary = summaryText.label
+
+        // Hero picker defaults to BB (always valid); switch to SB — should defend
+        // narrower, so the summary text should change. Scoped to the hero picker since
+        // "SB" also appears in the opponent picker.
+        let heroPicker = app.segmentedControls["heroPositionPicker"]
+        XCTAssertTrue(heroPicker.waitForExistence(timeout: 5))
+        heroPicker.buttons["SB"].tap()
+
+        XCTAssertTrue(summaryText.waitForExistence(timeout: 5))
+        XCTAssertNotEqual(summaryText.label, bbSummary)
+        attachScreenshot(of: app, name: "facing-open-sb")
+    }
+
     private func attachScreenshot(of app: XCUIApplication, name: String) {
         let attachment = XCTAttachment(screenshot: app.screenshot())
         attachment.name = name
