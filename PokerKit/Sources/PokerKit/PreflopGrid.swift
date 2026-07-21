@@ -73,4 +73,34 @@ public enum PreflopGrid {
             row.map { CallingRange.decideVsOpen(hand: $0, defender: defender, opener: opener, effectiveStackBB: effectiveStackBB)! }
         }
     }
+
+    /// The fold/call/3-bet(value)/3-bet(bluff) decision for every cell, for a given
+    /// defender facing an open from a given position — `nil` if `defender` couldn't
+    /// actually be facing that open. Uses `ThreeBetRange`'s polarized value/bluff model,
+    /// not `CallingRange.decideVsOpen`'s flat split — see `ThreeBetRange`'s doc comment
+    /// for why the two deliberately disagree.
+    public static func threeBetDecisions(
+        defender: DefendingPosition,
+        opener: Position,
+        effectiveStackBB: Double
+    ) -> [[ThreeBetDecision]]? {
+        guard defender.actionOrderIndex > opener.actionOrderIndex else { return nil }
+        return hands.map { row in
+            row.map { ThreeBetRange.decide(hand: $0, defender: defender, opener: opener, effectiveStackBB: effectiveStackBB)! }
+        }
+    }
+
+    /// The fold/call/4-bet(value)/4-bet(bluff) decision for every cell, for hero having
+    /// opened from `opener` and been 3-bet by `threeBettor` — `nil` for a nonsensical
+    /// position pairing (see `FourBetRange.totalContinuePercentage`).
+    public static func fourBetDecisions(
+        opener: Position,
+        threeBettor: DefendingPosition,
+        effectiveStackBB: Double
+    ) -> [[FourBetDecision]]? {
+        guard threeBettor.actionOrderIndex > opener.actionOrderIndex else { return nil }
+        return hands.map { row in
+            row.map { FourBetRange.decide(hand: $0, opener: opener, threeBettor: threeBettor, effectiveStackBB: effectiveStackBB)! }
+        }
+    }
 }
