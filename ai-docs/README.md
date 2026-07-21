@@ -17,6 +17,7 @@ drop into whichever subsystem you're touching:
 | [DRILLS.md](DRILLS.md) | How "Practice Your Leaks" derives a `DrillFocus` from a leak report and weights spots |
 | [PREFLOP-GRID.md](PREFLOP-GRID.md) | The 13×13 grid enumeration and range viewer |
 | [BOUNTY.md](BOUNTY.md) | PKO bounty-adjusted shove ranges: the formula, its source, and what it doesn't model |
+| [EQUITY.md](EQUITY.md) | `HandEvaluator`/`Equity`: exact + Monte Carlo win/tie/lose calculation, ground-truth validation, performance |
 | [TESTING.md](TESTING.md) | Running `swift test` (the Xcode/`DEVELOPER_DIR` requirement) and what CI does |
 
 See also **[AGENTS.md](../AGENTS.md)** (build/test/run, conventions, the
