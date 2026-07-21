@@ -1,11 +1,12 @@
 # Preflop Ranges
 
 Source: `PokerKit/Sources/PokerKit/ChenScore.swift`, `PushFoldRange.swift`,
-`OpeningRange.swift`, `CallingRange.swift`, `PushFoldSpot.swift`,
-`Position.swift`. Tests: `ChenScoreTests.swift`, `PushFoldRangeTests.swift`,
-`OpeningRangeTests.swift`, `CallingRangeTests.swift`.
+`OpeningRange.swift`, `CallingRange.swift`, `ThreeBetRange.swift`,
+`FourBetRange.swift`, `PushFoldSpot.swift`, `Position.swift`. Tests:
+`ChenScoreTests.swift`, `PushFoldRangeTests.swift`, `OpeningRangeTests.swift`,
+`CallingRangeTests.swift`, `ThreeBetRangeTests.swift`, `FourBetRangeTests.swift`.
 
-Four range models live here, covering both sides of a preflop decision across
+Six range models live here, covering both sides of a preflop decision across
 two stack regimes of an MTT:
 
 - **Push/Fold** (`PushFoldRange`) — short stacks, roughly 1–20bb, hero is the
@@ -17,12 +18,20 @@ two stack regimes of an MTT:
   *defending*: call-or-fold against someone else's shove.
 - **Facing an open** (`CallingRange.decideVsOpen`) — standard stacks, hero is
   *defending*: fold, call, or 3-bet against someone else's open-raise.
+- **3-Bet** (`ThreeBetRange`) — standard stacks, roughly 20–100bb, hero is
+  *defending*: a more detailed, polarized (value + bluff) opinion on the
+  3-bet slice of "Facing an open," specifically for players studying 3-bet
+  strategy.
+- **4-Bet** (`FourBetRange`) — standard stacks, roughly 20–100bb, hero
+  *opened*, got 3-bet, and now decides fold/call/4-bet(value)/4-bet(bluff) —
+  the one preflop decision point none of the other five models cover.
 
-All four are **hand-tuned study aids, not solver output** — see each section
-below for what "hand-tuned" means and where the numbers come from. The two
-defending models are meaningfully less certain than the two aggressor models
-— see "Facing a shove" and "Facing an open" below for exactly why, and which
-parts of each to trust least.
+All six are **hand-tuned study aids, not solver output** — see each section
+below for what "hand-tuned" means and where the numbers come from. The four
+defending/reacting models are meaningfully less certain than the two
+aggressor models — see their sections below for exactly why, and which parts
+of each to trust least. `FourBetRange` in particular is this file's single
+least-certain model — see its section for why.
 
 `PushFoldRange` also has an optional PKO **bounty-adjusted** overlay —
 `BountyEquity` — that widens its shove percentage when hero covers a bountied
@@ -318,6 +327,156 @@ documents for itself.
 5. `decideVsOpen` — 3-bets at or above the 3-bet threshold, calls at or
    above the defend threshold, folds below it.
 
+### "Two opinions, on purpose"
+
+`CallingRange.decideVsOpen` already produces a 3-bet number (via
+`threeBetShare`, above) — `ThreeBetRange` is a **second, deliberately more
+careful opinion on the same question**, not a replacement. `CallingRange`
+stays exactly as documented above, still backs the "Facing Open" grid mode,
+and its own tests still pass with its own numbers. The two *will* disagree on
+a given spot, and that disagreement is disclosed here rather than silently
+papered over:
+
+At the big blind vs. button anchor spot, 100bb: `CallingRange.decideVsOpen`
+implies a **~21%** 3-bet (25% of its 84% total-defense anchor).
+`ThreeBetRange.totalThreeBetPercentage` gives **13%** at the same spot (its
+own sourced anchor — see below). That's an ~8-point disagreement on the
+exact same question, and it's expected: `CallingRange`'s 25%/45%/35% split is
+an explicitly unsourced, middling guess (see "Facing an Open" above);
+`ThreeBetRange`'s 13% is the one number in either model actually backed by a
+cited external figure. If you're studying 3-bet strategy specifically, trust
+`ThreeBetRange`'s number over `CallingRange`'s for this spot; if you're just
+looking at the "Facing Open" grid's overall shape, `CallingRange`'s number is
+what's shown there and isn't being silently overridden.
+
+## 3-Bet Ranges
+
+A **fold/call/3-bet(value)/3-bet(bluff) decision**: same inputs as "Facing an
+Open" (`defender: DefendingPosition` facing an `opener: Position`'s open,
+roughly 20–100bb effective) but a materially different *shape* of range.
+`CallingRange.decideVsOpen`'s 3-bet slice is a single contiguous top-Chen-score
+band — it can't represent what a real 3-bet range actually looks like:
+**polarized**, built from premium value hands *and* a distinct set of
+blocker-driven bluffs that are *not* the next-best hands by raw strength.
+`ThreeBetRange` models that shape directly.
+
+**This is a hand-tuned study aid, not solver output**, same posture as every
+other model in this file. Source basis:
+
+- **The one sourced anchor:** big blind's 3-bet percentage against a button
+  open at ~100bb is commonly cited in the **12–14%** range for a polarized
+  100bb 3-bet (found via web search of MTT 3-betting strategy material). This
+  project's own anchor is the midpoint, **13%**. Every other
+  position/opener/stack combination scales off this one number, via the same
+  `OpeningRange`-ratio technique `CallingRange.totalDefensePercentage` already
+  uses (`totalThreeBetPercentage(opener:) / totalThreeBetPercentage(anchor)`
+  scaling by `OpeningRange.openPercentage(opener:) / OpeningRange.openPercentage(.button:)`),
+  and by the same small-blind (0.65×) / non-blind (0.5×) factors
+  `CallingRange.totalDefensePercentage` already uses — reused, not
+  re-derived, so there's still only one opinion in this codebase on "how
+  much narrower is the small blind / a non-blind defender than the big
+  blind."
+- **The bluff-combo selection** (`ThreeBetRange.bluffCombos`): suited wheel
+  aces, **A5s down to A2s** — the most consistently-cited 3-bet blocker-bluff
+  selection across MTT strategy sources found while building this
+  (upswingpoker.com, tournamentpokeredge.com, bbzpoker.com). These block
+  villain's premium pairs and AK while retaining real equity when called —
+  the standard justification for 3-bet bluffing with them rather than, say,
+  a middling offsuit broadway that blocks less and plays worse out of
+  position. **Deliberately not scaled by stack or position** — real 3-bet
+  bluff selection is chosen for blocker properties, a different axis than
+  the raw hand-strength percentile this codebase's threshold pipeline
+  otherwise uses everywhere else. This fixed list doesn't shrink or grow
+  with the spot; only *whether it's included at all* does — bluffs require
+  `effectiveStackBB >= 20` (3-bet bluffing needs enough stack behind it to
+  fold out a real range and still play a pot if called).
+- **Value is carved out of the sourced total, not added on top of it**:
+  `valuePercentage = totalThreeBet − bluffPercentageOfCanonicalHands` (the
+  ~2.4% of the 169 canonical hands the 4 bluff combos represent) whenever
+  there's room; the top Chen-score slice of that size is "value."
+  **Narrow spots can have less total 3-bet range than the fixed bluff
+  carve-out** (e.g. a deep non-blind defender vs. a tight UTG open, where the
+  sourced total scales down to well under 2%) — in that case the model
+  doesn't shrink value to make room for bluffs it can't afford; it drops the
+  bluffs entirely and the whole (small) total becomes value-only. This
+  matches the qualitative guidance found across sources ("if your value
+  range is tight, you don't need bluffs to go with it") rather than
+  mechanically forcing every spot into the same value+bluff shape.
+- **The call/fold boundary** still comes from `CallingRange.totalDefensePercentage`
+  — this module only refines what's *inside* that existing, already-disclosed
+  boundary, not the boundary itself.
+
+### The pipeline
+
+1. `ThreeBetRange.totalThreeBetPercentage(defender:opener:effectiveStackBB:)`
+   — the 13% anchor, scaled by opener strength and defender-position factor,
+   same technique as `CallingRange.totalDefensePercentage`.
+2. `CallingRange.totalDefensePercentage(defender:opener:effectiveStackBB:)` —
+   reused as the outer call-or-better boundary.
+3. `hasRoomForBluffs = totalThreeBet > bluffPercentageOfCanonicalHands` — the
+   gate described above; when false, bluffs are omitted and value takes the
+   whole total.
+4. `PushFoldRange.scoreThreshold(forPercentage:)` — reused twice: once for
+   the value threshold, once for the overall call threshold. Its existing
+   floor-at-the-single-best-hand behavior (see `PushFoldRange`) means value
+   is never actually empty even at a 0%-after-carve-out spot — AA (Chen
+   score 20, the maximum) always clears whatever threshold a near-zero
+   percentage resolves to.
+5. `decide` — 3-bets for value at or above the value threshold, 3-bets as a
+   bluff if it's a designated bluff combo and bluffs are affordable, calls at
+   or above the call threshold, else folds.
+
+## 4-Bet Ranges
+
+A **fold/call/4-bet(value)/4-bet(bluff) decision**: hero **opened**, got
+**3-bet**, and now decides how to continue — the one preflop decision point
+none of the other five models in this file cover (every other model has
+hero either opening/shoving as the first aggressor, or reacting to someone
+else's *first* raise/shove; this is hero reacting to someone reacting to
+*them*).
+
+**This is this file's single least-certain model.** Every other model has at
+least one genuinely-sourced anchor for *that exact situation*. `FourBetRange`'s
+one anchor is a single reported example — a cutoff open facing a button
+3-bet, continuing **67%** of hands (**50%** call + **17%** four-bet, folding
+the rest), assumed ~100bb since the source didn't specify a stack depth
+(found via web search) — generalized to every other position pairing by
+scaling against `ThreeBetRange`'s own predicted 3-bet width at that pairing,
+relative to its width at the anchor pairing
+(`totalContinuePercentage ratio = ThreeBetRange.totalThreeBetPercentage(this pairing) / ThreeBetRange.totalThreeBetPercentage(anchor pairing)`).
+This reuses `ThreeBetRange`'s own numbers rather than inventing a second
+opinion on 3-bet width — but it also means `FourBetRange`'s accuracy is
+capped by `ThreeBetRange`'s own (already-disclosed, itself hand-tuned)
+accuracy, one layer removed from the single external data point either model
+has. **Treat every number in this section as directional, not precise.**
+
+- **Bluffs**: the same suited-wheel-ace list `ThreeBetRange.bluffCombos`
+  uses (see above) — the standard 4-bet bluff selection too, for the same
+  blocker-driven reason. Included only when `hand` is also within hero's own
+  opening range for `opener` at this stack (`OpeningRange.decide(...).action == .raise`
+  — you can't 4-bet-bluff a hand you wouldn't have opened) and
+  `effectiveStackBB >= 40` — 4-betting needs meaningfully more room behind
+  it than 3-betting does; shorter than that, a "4-bet" is functionally a
+  shove, better modeled by `PushFoldRange` directly. Same room-gating as
+  `ThreeBetRange`: a continuing range narrower than the bluff carve-out drops
+  the bluffs and goes value-only, rather than forcing bluffs into a spot too
+  tight to have any.
+- **Value** is carved out of the 4-bet share of `totalContinuePercentage`
+  the same way `ThreeBetRange` carves value out of its total.
+
+### The pipeline
+
+1. `FourBetRange.totalContinuePercentage(opener:threeBettor:effectiveStackBB:)`
+   — the 67% anchor, scaled by `ThreeBetRange`'s own ratio for this pairing
+   vs. the anchor pairing.
+2. `fourBetPercentage = totalContinue × (17/67)` — the anchor's own
+   four-bet-vs-continue ratio, held fixed across every pairing (no
+   independent sourcing exists for how that ratio itself might shift by
+   position — another disclosed simplification).
+3. Same `hasRoomForBluffs` gate, value/threshold/`scoreThreshold` reuse, and
+   decision ordering as `ThreeBetRange.decide` (see above), with
+   `totalContinue` playing the role `totalDefense` plays there.
+
 ## Positions modeled
 
 `Position` (`UTG, MP, HJ, CO, BTN, SB`) deliberately **excludes the big
@@ -340,10 +499,13 @@ return `nil` rather than a nonsensical decision when that's violated.
 - `PushFoldTrainerView` — plain random push/fold practice.
 - `PreflopGrid` (`PREFLOP-GRID.md`) — renders `PushFoldRange.decide` (via
   `decisions`), `OpeningRange.decide` (via `openingDecisions`),
-  `CallingRange.decideVsShove` (via `callingDecisions`), and
-  `CallingRange.decideVsOpen` (via `openDefenseDecisions`) for all 169 hands
-  at once as a grid; `PreflopRangeView` switches between all four with a
-  mode control.
+  `CallingRange.decideVsShove` (via `callingDecisions`),
+  `CallingRange.decideVsOpen` (via `openDefenseDecisions`),
+  `ThreeBetRange.decide` (via `threeBetDecisions`), and `FourBetRange.decide`
+  (via `fourBetDecisions`) for all 169 hands at once as a grid;
+  `PreflopRangeView` switches between all six with a mode control (3-Bet and
+  4-Bet render a third cell color for bluff combos, distinct from value and
+  call).
 - `LeakAnalysisEngine` (`LEAK-ANALYSIS.md`) — compares hero's actual
   imported-hand decisions against `PushFoldRange.decide` to find deviations.
   Still push/fold-only; opening-range and defending-range adherence are not
@@ -353,10 +515,13 @@ return `nil` rather than a nonsensical decision when that's violated.
 
 Within each model there is exactly one implementation — every consumer of a
 given model calls through that model directly, so there's never a second
-opinion on what "correct" means for a given spot. The four models themselves
-are intentionally separate (different stack regimes, different roles,
-different source basis, different confidence level) rather than one model
-trying to cover everything. `CallingRange`'s two halves in particular reuse
-`PushFoldRange`/`OpeningRange`'s own numbers rather than re-deriving
-anything — there's exactly one "how wide does this position shove/open"
-opinion in the codebase, and both defending models scale off it.
+opinion on what "correct" means for a given spot (the one deliberate
+exception, `ThreeBetRange` vs. `CallingRange.decideVsOpen`'s 3-bet slice, is
+disclosed in "Two opinions, on purpose" above rather than silently
+overriding one with the other). The six models themselves are intentionally
+separate (different stack regimes, different roles, different source basis,
+different confidence level) rather than one model trying to cover
+everything. `CallingRange`'s two halves, `ThreeBetRange`, and `FourBetRange`
+all reuse `PushFoldRange`/`OpeningRange`'s own numbers rather than
+re-deriving anything — there's exactly one "how wide does this position
+shove/open" opinion in the codebase, and every reacting model scales off it.

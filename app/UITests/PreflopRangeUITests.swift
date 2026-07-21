@@ -117,6 +117,68 @@ final class PreflopRangeUITests: XCTestCase {
         attachScreenshot(of: app, name: "facing-open-sb")
     }
 
+    func testThreeBetModeRendersAndReactsToHeroChange() {
+        let app = XCUIApplication()
+        app.launch()
+
+        app.staticTexts["Preflop Ranges"].tap()
+
+        app.buttons["3-Bet"].tap()
+
+        let aaCell = app.staticTexts["cell-AA"]
+        XCTAssertTrue(aaCell.waitForExistence(timeout: 5))
+        attachScreenshot(of: app, name: "three-bet-bb")
+
+        let summaryText = app.staticTexts["shovePercentageText"]
+        XCTAssertTrue(summaryText.exists)
+        XCTAssertTrue(summaryText.label.contains("value"), "3-Bet summary should break out value/bluff")
+        let bbSummary = summaryText.label
+
+        let caveat = app.staticTexts["defenseCaveatText"]
+        XCTAssertTrue(caveat.waitForExistence(timeout: 5))
+        XCTAssertTrue(caveat.label.contains("RANGES.md"))
+
+        let heroPicker = app.segmentedControls["heroPositionPicker"]
+        XCTAssertTrue(heroPicker.waitForExistence(timeout: 5))
+        heroPicker.buttons["SB"].tap()
+
+        XCTAssertTrue(summaryText.waitForExistence(timeout: 5))
+        XCTAssertNotEqual(summaryText.label, bbSummary)
+        attachScreenshot(of: app, name: "three-bet-sb")
+    }
+
+    func testFourBetModeRendersAndReactsToOpenerChange() {
+        let app = XCUIApplication()
+        app.launch()
+
+        app.staticTexts["Preflop Ranges"].tap()
+
+        app.buttons["4-Bet"].tap()
+
+        let aaCell = app.staticTexts["cell-AA"]
+        XCTAssertTrue(aaCell.waitForExistence(timeout: 5))
+        attachScreenshot(of: app, name: "four-bet-co-vs-btn")
+
+        let summaryText = app.staticTexts["shovePercentageText"]
+        XCTAssertTrue(summaryText.exists)
+        XCTAssertTrue(summaryText.label.contains("continue"), "4-Bet summary should describe continuing, not defending")
+        let coSummary = summaryText.label
+
+        let caveat = app.staticTexts["defenseCaveatText"]
+        XCTAssertTrue(caveat.waitForExistence(timeout: 5))
+        XCTAssertTrue(caveat.label.contains("least-certain"))
+
+        // Opener picker scoped by accessibility identifier since "UTG" doesn't collide with
+        // the 3-bettor picker's options in this mode's default state.
+        let openerPicker = app.segmentedControls["fourBetOpenerPositionPicker"]
+        XCTAssertTrue(openerPicker.waitForExistence(timeout: 5))
+        openerPicker.buttons["UTG"].tap()
+
+        XCTAssertTrue(summaryText.waitForExistence(timeout: 5))
+        XCTAssertNotEqual(summaryText.label, coSummary)
+        attachScreenshot(of: app, name: "four-bet-utg-vs-bb")
+    }
+
     private func attachScreenshot(of app: XCUIApplication, name: String) {
         let attachment = XCTAttachment(screenshot: app.screenshot())
         attachment.name = name

@@ -88,3 +88,51 @@ import Testing
     let shortSB = PreflopGrid.decisions(position: .smallBlind, effectiveStackBB: 1)
     #expect(shortSB[row][col].action == .push)
 }
+
+@Test func gridThreeBetDecisionsMatchDirectThreeBetRangeDecisions() {
+    for row in 0..<PreflopGrid.ranks.count {
+        for col in 0..<PreflopGrid.ranks.count {
+            let hand = PreflopGrid.hands[row][col]
+            let expected = ThreeBetRange.decide(hand: hand, defender: .bigBlind, opener: .button, effectiveStackBB: 100)
+            let actual = PreflopGrid.threeBetDecisions(defender: .bigBlind, opener: .button, effectiveStackBB: 100)![row][col]
+            #expect(actual.action == expected?.action)
+        }
+    }
+}
+
+@Test func aaAlways3BetsForValueAcrossGrid() {
+    for opener in Position.allCases {
+        for defender in DefendingPosition.allCases where defender.actionOrderIndex > opener.actionOrderIndex {
+            let decisions = PreflopGrid.threeBetDecisions(defender: defender, opener: opener, effectiveStackBB: 100)!
+            #expect(decisions[0][0].action == .threeBetValue, "AA should 3-bet for value vs \(opener) from \(defender)")
+        }
+    }
+}
+
+@Test func threeBetDecisionsNilForNonsensicalPositionPairing() {
+    #expect(PreflopGrid.threeBetDecisions(defender: .hijack, opener: .button, effectiveStackBB: 100) == nil)
+}
+
+@Test func gridFourBetDecisionsMatchDirectFourBetRangeDecisions() {
+    for row in 0..<PreflopGrid.ranks.count {
+        for col in 0..<PreflopGrid.ranks.count {
+            let hand = PreflopGrid.hands[row][col]
+            let expected = FourBetRange.decide(hand: hand, opener: .cutoff, threeBettor: .button, effectiveStackBB: 100)
+            let actual = PreflopGrid.fourBetDecisions(opener: .cutoff, threeBettor: .button, effectiveStackBB: 100)![row][col]
+            #expect(actual.action == expected?.action)
+        }
+    }
+}
+
+@Test func aaAlways4BetsForValueAcrossGrid() {
+    for opener in Position.allCases {
+        for threeBettor in DefendingPosition.allCases where threeBettor.actionOrderIndex > opener.actionOrderIndex {
+            let decisions = PreflopGrid.fourBetDecisions(opener: opener, threeBettor: threeBettor, effectiveStackBB: 100)!
+            #expect(decisions[0][0].action == .fourBetValue, "AA should 4-bet for value vs a 3-bet from \(threeBettor) after opening \(opener)")
+        }
+    }
+}
+
+@Test func fourBetDecisionsNilForNonsensicalPositionPairing() {
+    #expect(PreflopGrid.fourBetDecisions(opener: .button, threeBettor: .utg, effectiveStackBB: 100) == nil)
+}
