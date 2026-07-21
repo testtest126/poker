@@ -23,6 +23,8 @@ struct ContentView: View {
                     PreflopRangeView()
                 case .pushFold:
                     PushFoldTrainerView()
+                case .equityCalculator:
+                    EquityCalculatorView()
                 case .bankroll:
                     BankrollTrackerView()
                 case .handHistoryImport:

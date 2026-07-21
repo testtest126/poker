@@ -5,7 +5,14 @@ final class BankrollTrackerUITests: XCTestCase {
         let app = XCUIApplication()
         app.launch()
 
-        app.staticTexts["Bankroll Tracker"].tap()
+        // "Bankroll Tracker" can render below the fold on the home list depending on how
+        // many study tools are above it — scroll until it's actually in the accessibility
+        // tree before tapping (SwiftUI's List lazily instantiates off-screen rows).
+        let bankrollRow = app.staticTexts["Bankroll Tracker"]
+        for _ in 0..<8 where !bankrollRow.exists {
+            app.swipeUp()
+        }
+        bankrollRow.tap()
 
         let addButton = app.navigationBars.buttons["Add Session"]
         XCTAssertTrue(addButton.waitForExistence(timeout: 5))
