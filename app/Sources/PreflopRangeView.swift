@@ -9,29 +9,44 @@ private enum RangeMode: String, CaseIterable, Identifiable {
     case opening = "Opening"
     case vsShove = "Facing Shove"
     case vsOpen = "Facing Open"
+    case threeBet = "3-Bet"
+    case fourBet = "4-Bet"
 
     var id: String { rawValue }
 
-    /// Whether this mode is hero-as-aggressor (one position picker) or hero-as-defender
-    /// (an opponent-position picker plus a hero-position picker).
-    var isDefending: Bool {
+    /// Which position-picker shape this mode needs. `.position` is hero-as-aggressor (one
+    /// picker); `.defenderVsOpener` is hero-as-defender (opponent opens/shoves as a
+    /// `Position`, hero responds as a `DefendingPosition`) — `vsShove`, `vsOpen`, and
+    /// `threeBet` all share this shape. `.fourBet` inverts it: hero is the original
+    /// `Position` opener, the opponent is the `DefendingPosition` who 3-bet *them*.
+    enum ControlLayout {
+        case position
+        case defenderVsOpener
+        case openerVsThreeBettor
+    }
+
+    var controlLayout: ControlLayout {
         switch self {
-        case .pushFold, .opening: return false
-        case .vsShove, .vsOpen: return true
+        case .pushFold, .opening: return .position
+        case .vsShove, .vsOpen, .threeBet: return .defenderVsOpener
+        case .fourBet: return .openerVsThreeBettor
         }
     }
 
     var stackRange: ClosedRange<Double> {
         switch self {
         case .pushFold, .vsShove: return 1...20
-        case .opening, .vsOpen: return 20...100
+        case .opening, .vsOpen, .threeBet, .fourBet: return 20...100
         }
     }
 
+    /// 3-bet/4-bet default to 100bb specifically because that's the stack depth each
+    /// model's one sourced anchor pairing was measured at — see `RANGES.md`.
     var defaultStack: Double {
         switch self {
         case .pushFold, .vsShove: return 10
         case .opening, .vsOpen: return 50
+        case .threeBet, .fourBet: return 100
         }
     }
 
@@ -41,6 +56,8 @@ private enum RangeMode: String, CaseIterable, Identifiable {
         case .opening: return [(.accentColor, "Raise")]
         case .vsShove: return [(.accentColor, "Call")]
         case .vsOpen: return [(.accentColor, "3-Bet"), (.teal, "Call")]
+        case .threeBet: return [(.accentColor, "3-Bet Value"), (.purple, "3-Bet Bluff"), (.teal, "Call")]
+        case .fourBet: return [(.accentColor, "4-Bet Value"), (.purple, "4-Bet Bluff"), (.teal, "Call")]
         }
     }
 }
@@ -54,6 +71,9 @@ private enum RangeMode: String, CaseIterable, Identifiable {
 private enum CellStyle {
     case primary
     case secondary
+    /// 3-bet/4-bet bluff combos — a third role distinct from `.primary` (value) and
+    /// `.secondary` (call), only ever produced by `.threeBet`/`.fourBet` mode.
+    case tertiary
     case bountyOnly
     case fold
 
@@ -61,6 +81,7 @@ private enum CellStyle {
         switch self {
         case .primary: return .accentColor
         case .secondary: return .teal
+        case .tertiary: return .purple
         case .bountyOnly: return .orange
         case .fold: return Color(.secondarySystemBackground)
         }
@@ -68,7 +89,7 @@ private enum CellStyle {
 
     var textColor: Color {
         switch self {
-        case .primary, .secondary, .bountyOnly: return .white
+        case .primary, .secondary, .tertiary, .bountyOnly: return .white
         case .fold: return .secondary
         }
     }
@@ -89,12 +110,15 @@ struct PreflopRangeView: View {
 
     private var isBountyActive: Bool { mode == .pushFold && bountyEnabled }
 
-    /// `DefendingPosition`s that could plausibly be facing `opponentPosition` — anyone who
-    /// acts after them at an unopened table. The big blind is always valid, so it's a safe
-    /// fallback default no matter what `opponentPosition` is.
-    private var validHeroPositions: [DefendingPosition] {
-        DefendingPosition.allCases.filter { $0.actionOrderIndex > opponentPosition.actionOrderIndex }
+    /// `DefendingPosition`s that could plausibly be facing an open/shove from `opener` —
+    /// anyone who acts after them at an unopened table. The big blind is always valid (it
+    /// has the highest `actionOrderIndex` of any `DefendingPosition`), so it's a safe
+    /// fallback default no matter what `opener` is.
+    private func validDefendingPositions(after opener: Position) -> [DefendingPosition] {
+        DefendingPosition.allCases.filter { $0.actionOrderIndex > opener.actionOrderIndex }
     }
+
+    private var validHeroPositions: [DefendingPosition] { validDefendingPositions(after: opponentPosition) }
 
     /// Whether each of the 169 grid cells is `PushFoldRange`'s own push/fold action —
     /// ignoring any bounty overlay. Only actually used in Push/Fold mode, but cheap enough
@@ -157,6 +181,38 @@ struct PreflopRangeView: View {
                     }
                 }
             }
+        case .threeBet:
+            guard let decisions = PreflopGrid.threeBetDecisions(
+                defender: heroPosition, opener: opponentPosition, effectiveStackBB: effectiveStackBB
+            ) else {
+                return emptyGrid
+            }
+            return decisions.map { row in
+                row.map { decision in
+                    switch decision.action {
+                    case .threeBetValue: return .primary
+                    case .threeBetBluff: return .tertiary
+                    case .call: return .secondary
+                    case .fold: return .fold
+                    }
+                }
+            }
+        case .fourBet:
+            guard let decisions = PreflopGrid.fourBetDecisions(
+                opener: position, threeBettor: heroPosition, effectiveStackBB: effectiveStackBB
+            ) else {
+                return emptyGrid
+            }
+            return decisions.map { row in
+                row.map { decision in
+                    switch decision.action {
+                    case .fourBetValue: return .primary
+                    case .fourBetBluff: return .tertiary
+                    case .call: return .secondary
+                    case .fold: return .fold
+                    }
+                }
+            }
         }
     }
 
@@ -197,6 +253,16 @@ struct PreflopRangeView: View {
             let threeBetPct = Double(threeBetCount) / total * 100
             return "\(pct(defendPct))% of hands to defend "
                 + "(\(pct(threeBetPct))% 3-bet)"
+        case .threeBet:
+            let valuePct = Double(flat.filter { $0 == .primary }.count) / total * 100
+            let bluffPct = Double(flat.filter { $0 == .tertiary }.count) / total * 100
+            return "\(pct(defendPct))% of hands to defend "
+                + "(\(pct(valuePct))% value, \(pct(bluffPct))% bluff)"
+        case .fourBet:
+            let valuePct = Double(flat.filter { $0 == .primary }.count) / total * 100
+            let bluffPct = Double(flat.filter { $0 == .tertiary }.count) / total * 100
+            return "\(pct(defendPct))% of hands to continue "
+                + "(\(pct(valuePct))% value, \(pct(bluffPct))% bluff)"
         }
     }
 
@@ -209,7 +275,7 @@ struct PreflopRangeView: View {
                 summary
                 grid
                 legend
-                if mode.isDefending {
+                if mode.controlLayout != .position {
                     defenseCaveat
                 } else if isBountyActive {
                     bountyCaveat
@@ -232,11 +298,23 @@ struct PreflopRangeView: View {
             .accessibilityIdentifier("rangeModePicker")
             .onChange(of: mode) { _, newMode in
                 effectiveStackBB = newMode.defaultStack
+                // Land on each model's one sourced anchor pairing by default — see
+                // `ThreeBetRange`/`FourBetRange`'s doc comments for why these two spots
+                // specifically are the best-grounded numbers each model produces.
+                switch newMode {
+                case .threeBet:
+                    opponentPosition = .button
+                    heroPosition = .bigBlind
+                case .fourBet:
+                    position = .cutoff
+                    heroPosition = .button
+                default:
+                    break
+                }
             }
 
-            if mode.isDefending {
-                defendingPositionControls
-            } else {
+            switch mode.controlLayout {
+            case .position:
                 Picker("Position", selection: $position) {
                     ForEach(Position.allCases) { position in
                         Text(position.rawValue).tag(position)
@@ -244,6 +322,10 @@ struct PreflopRangeView: View {
                 }
                 .pickerStyle(.segmented)
                 .accessibilityIdentifier("positionPicker")
+            case .defenderVsOpener:
+                defendingPositionControls
+            case .openerVsThreeBettor:
+                fourBetControls
             }
 
             VStack(alignment: .leading, spacing: 4) {
@@ -329,6 +411,45 @@ struct PreflopRangeView: View {
         }
     }
 
+    /// `.fourBet` mode's control shape is `defendingPositionControls` inverted: hero is the
+    /// original `Position` opener, the opponent is the `DefendingPosition` who 3-bet them —
+    /// reuses the same `position`/`heroPosition` state as the other modes, just with the
+    /// roles swapped.
+    private var fourBetControls: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text("You Opened")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                Picker("You Opened", selection: $position) {
+                    ForEach(Position.allCases) { position in
+                        Text(position.rawValue).tag(position)
+                    }
+                }
+                .pickerStyle(.segmented)
+                .accessibilityIdentifier("fourBetOpenerPositionPicker")
+                .onChange(of: position) { _, newOpener in
+                    if heroPosition.actionOrderIndex <= newOpener.actionOrderIndex {
+                        heroPosition = .bigBlind
+                    }
+                }
+            }
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text("3-Bettor")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                Picker("3-Bettor", selection: $heroPosition) {
+                    ForEach(validDefendingPositions(after: position)) { position in
+                        Text(position.rawValue).tag(position)
+                    }
+                }
+                .pickerStyle(.segmented)
+                .accessibilityIdentifier("fourBetThreeBettorPositionPicker")
+            }
+        }
+    }
+
     private var summary: some View {
         Text(summaryText)
             .font(.subheadline.bold())
@@ -388,15 +509,26 @@ struct PreflopRangeView: View {
     }
 
     private var defenseCaveat: some View {
-        Text(
-            mode == .vsShove
-            ? "Study aid, not solver output. Big-blind calls are this model's best-grounded numbers; every other caller here is a rougher approximation — see RANGES.md."
-            : "Study aid, not solver output. Blind-defense shape is sourced; non-blind defenders and the 3-bet/call split are hand-tuned approximations — see RANGES.md."
-        )
-        .font(.caption)
-        .foregroundStyle(.secondary)
-        .multilineTextAlignment(.center)
-        .accessibilityIdentifier("defenseCaveatText")
+        Text(defenseCaveatText)
+            .font(.caption)
+            .foregroundStyle(.secondary)
+            .multilineTextAlignment(.center)
+            .accessibilityIdentifier("defenseCaveatText")
+    }
+
+    private var defenseCaveatText: String {
+        switch mode {
+        case .pushFold, .opening:
+            return ""
+        case .vsShove:
+            return "Study aid, not solver output. Big-blind calls are this model's best-grounded numbers; every other caller here is a rougher approximation — see RANGES.md."
+        case .vsOpen:
+            return "Study aid, not solver output. Blind-defense shape is sourced; non-blind defenders and the 3-bet/call split are hand-tuned approximations — see RANGES.md."
+        case .threeBet:
+            return "Study aid, not solver output. Polarized value + a fixed blocker-bluff list (suited wheel aces), not a solver-derived range — bluffs only apply at 20bb+, and this model deliberately disagrees with \"Facing Open\"'s cruder 3-bet split. See RANGES.md."
+        case .fourBet:
+            return "Study aid, not solver output — this codebase's least-certain preflop model. One sourced anchor (cutoff opener vs. a button 3-bet, ~100bb); every other spot is scaled from it. Bluffs only apply at 40bb+. See RANGES.md."
+        }
     }
 
     private var bountyCaveat: some View {
