@@ -6,11 +6,12 @@ Source: `PokerKit/Sources/PokerKit/PreflopGrid.swift`. Tests:
 
 ## What it does
 
-Enumerates the classic 13×13 starting-hand grid and lays out push/fold and
-opening decisions across it. It is purely an enumeration/layout helper — it
-introduces no new range model, reusing `PushFoldRange.decide` and
-`OpeningRange.decide` (both backed by `ChenScore` — see `RANGES.md`) for
-every cell's actual decision.
+Enumerates the classic 13×13 starting-hand grid and lays out push/fold,
+opening, and defending decisions across it. It is purely an
+enumeration/layout helper — it introduces no new range model, reusing
+`PushFoldRange.decide`, `OpeningRange.decide`, `CallingRange.decideVsShove`,
+and `CallingRange.decideVsOpen` (all ultimately backed by `ChenScore` — see
+`RANGES.md`) for every cell's actual decision.
 
 ## Layout convention
 
@@ -34,17 +35,39 @@ of `hands`, indexed `[row][col]` to match.
 ## `openingDecisions(position:effectiveStackBB:) -> [[OpeningDecision]]`
 
 Same shape, mapping `OpeningRange.decide(hand:position:effectiveStackBB:)`
-instead. `PreflopRangeView` has a "Push/Fold" vs. "Opening" segmented control
-that picks which of these two functions backs the grid, plus a position
-picker and a stack slider (1–20bb for push/fold, 20–100bb for opening)
-driving the shared parameters live. Both render one `Color.accentColor`
-(shove/raise) or `Color(.secondarySystemBackground)` (fold) cell per
-decision — the view only cares about `action == .push` / `action == .raise`,
-never the two decision types at once.
+instead.
 
-`gridDecisionsMatchDirectPushFoldRangeDecisions` and
-`gridOpeningDecisionsMatchDirectOpeningRangeDecisions` (tests) are the
+## `callingDecisions(caller:shover:effectiveStackBB:) -> [[CallVsShoveDecision]]?`
+
+Maps `CallingRange.decideVsShove(hand:caller:shover:effectiveStackBB:)` over
+every cell — hero (`caller`, a `DefendingPosition`) is facing an all-in shove
+from `shover`. Returns `nil` — not a grid of nonsense — when `caller`
+couldn't actually be facing that shove (see `RANGES.md`'s "Positions
+modeled").
+
+## `openDefenseDecisions(defender:opener:effectiveStackBB:) -> [[OpenDefenseDecision]]?`
+
+Same shape, mapping `CallingRange.decideVsOpen(hand:defender:opener:effectiveStackBB:)`
+— hero (`defender`) is facing an open-raise from `opener`. Also returns `nil`
+for an invalid position pairing.
+
+`PreflopRangeView` has a mode control (Push/Fold, Opening, Facing a Shove,
+Facing an Open) that picks which of these four functions backs the grid,
+plus position picker(s) and a stack slider (1–20bb for the two short-stack
+modes, 20–100bb for the two standard-stack modes) driving the shared
+parameters live. The two aggressor modes render one `Color.accentColor`
+(shove/raise) or `Color(.secondarySystemBackground)` (fold) cell per
+decision. The two defending modes add a third color for 3-bet/call so all
+three actions are visually distinct — the view only cares about which of
+`push`/`raise`/`threeBet`/`call`/`fold` a cell's action is, never the
+decision types themselves.
+
+`gridDecisionsMatchDirectPushFoldRangeDecisions`,
+`gridOpeningDecisionsMatchDirectOpeningRangeDecisions`,
+`gridCallingDecisionsMatchDirectCallingRangeDecisions`, and
+`gridOpenDefenseDecisionsMatchDirectCallingRangeDecisions` (tests) are the
 load-bearing guarantee here: every grid cell's decision is required to
 exactly match calling the corresponding model directly for that same
-hand/position/stack — the grid is not allowed to drift into its own logic for
-either model.
+hand/position(s)/stack — the grid is not allowed to drift into its own logic
+for any of the four models. `gridReturnsNilForInvalidPositionPairings`
+covers the two defending modes' `nil` case specifically.
