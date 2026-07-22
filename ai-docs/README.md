@@ -19,6 +19,7 @@ drop into whichever subsystem you're touching:
 | [BOUNTY.md](BOUNTY.md) | PKO bounty-adjusted shove ranges: the formula, its source, and what it doesn't model |
 | [EQUITY.md](EQUITY.md) | `HandEvaluator`/`Equity`: exact + Monte Carlo win/tie/lose calculation, ground-truth validation, performance |
 | [ICM.md](ICM.md) | `ICM`/`ICMRiskPremium`: exact Malmuth-Harville tournament equity, validated against a published worked example, ICM-adjusted calling breakeven |
+| [FORMATS.md](FORMATS.md) | `GameFormat`: per-format defaults (stack, ante, bounty, ICM weight, speed) that seed the other tools — design judgment, not ground-truth math |
 | [TESTING.md](TESTING.md) | Running `swift test` (the Xcode/`DEVELOPER_DIR` requirement) and what CI does |
 
 See also **[AGENTS.md](../AGENTS.md)** (build/test/run, conventions, the
