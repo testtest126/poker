@@ -25,6 +25,8 @@ struct ContentView: View {
                     PushFoldTrainerView()
                 case .equityCalculator:
                     EquityCalculatorView()
+                case .icmCalculator:
+                    ICMCalculatorView()
                 case .bankroll:
                     BankrollTrackerView()
                 case .handHistoryImport:
