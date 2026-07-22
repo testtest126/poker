@@ -6,6 +6,7 @@ public enum StudyTool: String, CaseIterable, Identifiable, Hashable, Sendable {
     case pushFold
     case equityCalculator
     case icmCalculator
+    case gameFormats
     case bankroll
     case handHistoryImport
     case drills
@@ -18,6 +19,7 @@ public enum StudyTool: String, CaseIterable, Identifiable, Hashable, Sendable {
         case .pushFold: return "Push/Fold Trainer"
         case .equityCalculator: return "Equity Calculator"
         case .icmCalculator: return "ICM Calculator"
+        case .gameFormats: return "Game Format"
         case .bankroll: return "Bankroll Tracker"
         case .handHistoryImport: return "Hand History Import & Leaks"
         case .drills: return "Practice Your Leaks"
@@ -34,6 +36,8 @@ public enum StudyTool: String, CaseIterable, Identifiable, Hashable, Sendable {
             return "Win/tie/lose probability for any hand or hand class vs. another, on any board — exact math, not a rule of thumb."
         case .icmCalculator:
             return "Exact tournament $EV for any set of stacks and a payout structure — Malmuth-Harville ICM, not a rule of thumb."
+        case .gameFormats:
+            return "Pick a tournament/cash format to see its sensible default stack, ante, bounty, and ICM settings — a starting point, not a rule."
         case .bankroll:
             return "Buy-ins, cashes, ROI, variance, and bankroll-management guardrails for MTTs."
         case .handHistoryImport:

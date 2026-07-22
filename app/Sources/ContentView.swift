@@ -27,6 +27,8 @@ struct ContentView: View {
                     EquityCalculatorView()
                 case .icmCalculator:
                     ICMCalculatorView()
+                case .gameFormats:
+                    GameFormatView()
                 case .bankroll:
                     BankrollTrackerView()
                 case .handHistoryImport:
