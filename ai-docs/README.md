@@ -18,6 +18,7 @@ drop into whichever subsystem you're touching:
 | [PREFLOP-GRID.md](PREFLOP-GRID.md) | The 13×13 grid enumeration and range viewer |
 | [BOUNTY.md](BOUNTY.md) | PKO bounty-adjusted shove ranges: the formula, its source, and what it doesn't model |
 | [EQUITY.md](EQUITY.md) | `HandEvaluator`/`Equity`: exact + Monte Carlo win/tie/lose calculation, ground-truth validation, performance |
+| [ICM.md](ICM.md) | `ICM`/`ICMRiskPremium`: exact Malmuth-Harville tournament equity, validated against a published worked example, ICM-adjusted calling breakeven |
 | [TESTING.md](TESTING.md) | Running `swift test` (the Xcode/`DEVELOPER_DIR` requirement) and what CI does |
 
 See also **[AGENTS.md](../AGENTS.md)** (build/test/run, conventions, the
