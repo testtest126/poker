@@ -5,6 +5,7 @@ public enum StudyTool: String, CaseIterable, Identifiable, Hashable, Sendable {
     case preflopRanges
     case pushFold
     case equityCalculator
+    case omahaEquityCalculator
     case icmCalculator
     case gameFormats
     case bankroll
@@ -18,6 +19,7 @@ public enum StudyTool: String, CaseIterable, Identifiable, Hashable, Sendable {
         case .preflopRanges: return "Preflop Ranges"
         case .pushFold: return "Push/Fold Trainer"
         case .equityCalculator: return "Equity Calculator"
+        case .omahaEquityCalculator: return "Omaha Equity (Beta)"
         case .icmCalculator: return "ICM Calculator"
         case .gameFormats: return "Game Format"
         case .bankroll: return "Bankroll Tracker"
@@ -34,6 +36,8 @@ public enum StudyTool: String, CaseIterable, Identifiable, Hashable, Sendable {
             return "Shove-or-fold decisions for short stacks (~1-20bb), by position and effective stack."
         case .equityCalculator:
             return "Win/tie/lose probability for any hand or hand class vs. another, on any board — exact math, not a rule of thumb."
+        case .omahaEquityCalculator:
+            return "Win/tie/lose probability for two 4-card Omaha/PLO hands, entered as explicit notation. Phase 1 foundation — no preflop hand-strength/ranges yet."
         case .icmCalculator:
             return "Exact tournament $EV for any set of stacks and a payout structure — Malmuth-Harville ICM, not a rule of thumb."
         case .gameFormats:
