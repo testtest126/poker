@@ -25,6 +25,8 @@ struct ContentView: View {
                     PushFoldTrainerView()
                 case .equityCalculator:
                     EquityCalculatorView()
+                case .omahaEquityCalculator:
+                    OmahaEquityCalculatorView()
                 case .icmCalculator:
                     ICMCalculatorView()
                 case .gameFormats:
