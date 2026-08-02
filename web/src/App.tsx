@@ -4,8 +4,9 @@ import { Home } from './pages/Home'
 import { EquityCalculator } from './pages/EquityCalculator'
 import { RangeExplorer } from './pages/RangeExplorer'
 import { ICMCalculator } from './pages/ICMCalculator'
+import { Trainer } from './pages/Trainer'
 
-export type Page = 'home' | 'equity' | 'ranges' | 'icm'
+export type Page = 'home' | 'equity' | 'ranges' | 'icm' | 'trainer'
 
 function App() {
   const [page, setPage] = useState<Page>('home')
@@ -16,6 +17,7 @@ function App() {
       {page === 'equity' && <EquityCalculator />}
       {page === 'ranges' && <RangeExplorer />}
       {page === 'icm' && <ICMCalculator />}
+      {page === 'trainer' && <Trainer />}
     </Layout>
   )
 }
