@@ -1,8 +1,20 @@
+import { useState } from 'react'
+import { Layout } from './components/Layout'
+import { Home } from './pages/Home'
+import { EquityCalculator } from './pages/EquityCalculator'
+import { RangeExplorer } from './pages/RangeExplorer'
+
+export type Page = 'home' | 'equity' | 'ranges'
+
 function App() {
+  const [page, setPage] = useState<Page>('home')
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-white text-slate-900 dark:bg-slate-950 dark:text-slate-100">
-      <p className="text-sm text-slate-500">Poker Study — under construction.</p>
-    </div>
+    <Layout page={page} onNavigate={setPage}>
+      {page === 'home' && <Home onNavigate={setPage} />}
+      {page === 'equity' && <EquityCalculator />}
+      {page === 'ranges' && <RangeExplorer />}
+    </Layout>
   )
 }
 
