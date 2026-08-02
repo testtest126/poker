@@ -52,8 +52,20 @@ export function Home({ onNavigate }: { onNavigate: (p: Page) => void }) {
         >
           <h2 className="text-lg font-semibold">Preflop Ranges</h2>
           <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
-            Push/fold and opening (raise-first-in) ranges by position and effective stack — a
-            13×13 grid you can actually read.
+            Push/fold, opening, facing shove/open, and 3-bet/4-bet ranges by position and
+            effective stack — a 13×13 grid you can actually read.
+          </p>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => onNavigate('icm')}
+          className="rounded-lg border border-slate-200 bg-white p-5 text-left shadow-sm transition-shadow hover:shadow-md dark:border-slate-800 dark:bg-slate-900"
+        >
+          <h2 className="text-lg font-semibold">ICM Calculator</h2>
+          <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
+            Exact tournament $EV for any set of stacks and a payout structure —
+            Malmuth-Harville ICM, not a rule of thumb.
           </p>
         </button>
       </section>

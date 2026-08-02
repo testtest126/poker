@@ -5,6 +5,7 @@ const NAV_ITEMS: { page: Page; label: string }[] = [
   { page: 'home', label: 'Home' },
   { page: 'equity', label: 'Equity Calculator' },
   { page: 'ranges', label: 'Preflop Ranges' },
+  { page: 'icm', label: 'ICM Calculator' },
 ]
 
 export function Layout({
@@ -49,7 +50,7 @@ export function Layout({
       <main className="mx-auto w-full max-w-4xl flex-1 px-4 py-6">{children}</main>
 
       <footer className="border-t border-slate-200 px-4 py-4 text-center text-xs text-slate-500 dark:border-slate-800 dark:text-slate-500">
-        Free, open source, no account. A GTO-informed preflop/equity trainer — not a
+        Free, open source, no account. A GTO-informed preflop/equity/ICM trainer — not a
         postflop solver, and not implying to be one. See{' '}
         <a
           className="underline hover:text-indigo-600 dark:hover:text-indigo-400"
