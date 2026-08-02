@@ -2,10 +2,6 @@
 // grid: pairs on the diagonal, suited combos above it, offsuit below. Both axes run A
 // down to 2. Purely an enumeration/layout helper — reuses the range models for the actual
 // decisions, never introduces a new one.
-//
-// Only the two modes this app currently ships (push/fold, opening) are ported so far —
-// calling/3-bet/4-bet ranges exist in the Swift app but aren't ported here yet (see
-// ROADMAP.md).
 
 import { RANKS, type Rank, rankSymbol } from './card'
 import type { HoleCards } from './holeCards'
@@ -13,6 +9,10 @@ import { holeCardsFromCanonical } from './holeCards'
 import { decidePushFold, type PushFoldDecision } from './pushFoldRange'
 import { decideOpening, type OpeningDecision } from './openingRange'
 import type { Position } from './position'
+import type { DefendingPosition } from './defendingPosition'
+import { type CallVsShoveDecision, type OpenDefenseDecision, decideVsOpen, decideVsShove } from './callingRange'
+import { type ThreeBetDecision, decideThreeBet } from './threeBetRange'
+import { type FourBetDecision, decideFourBet } from './fourBetRange'
 
 /** Ranks A...2, in the order the grid's rows and columns are indexed. */
 export const GRID_RANKS: readonly Rank[] = [...RANKS].sort((a, b) => b - a)
@@ -38,4 +38,48 @@ export function pushFoldGridDecisions(position: Position, effectiveStackBB: numb
 
 export function openingGridDecisions(position: Position, effectiveStackBB: number): OpeningDecision[][] {
   return gridHands.map((row) => row.map((hand) => decideOpening(hand, position, effectiveStackBB)))
+}
+
+/** `undefined` if `caller`/`shover` is a nonsensical position pairing (see `decideVsShove`). */
+export function callingGridDecisions(
+  caller: DefendingPosition,
+  shover: Position,
+  effectiveStackBB: number,
+): (CallVsShoveDecision[][]) | undefined {
+  const first = decideVsShove(gridHands[0][0], caller, shover, effectiveStackBB)
+  if (!first) return undefined
+  return gridHands.map((row) => row.map((hand) => decideVsShove(hand, caller, shover, effectiveStackBB)!))
+}
+
+/** `undefined` if `defender`/`opener` is a nonsensical position pairing (see `decideVsOpen`). */
+export function openDefenseGridDecisions(
+  defender: DefendingPosition,
+  opener: Position,
+  effectiveStackBB: number,
+): (OpenDefenseDecision[][]) | undefined {
+  const first = decideVsOpen(gridHands[0][0], defender, opener, effectiveStackBB)
+  if (!first) return undefined
+  return gridHands.map((row) => row.map((hand) => decideVsOpen(hand, defender, opener, effectiveStackBB)!))
+}
+
+/** `undefined` if `defender`/`opener` is a nonsensical position pairing (see `decideThreeBet`). */
+export function threeBetGridDecisions(
+  defender: DefendingPosition,
+  opener: Position,
+  effectiveStackBB: number,
+): (ThreeBetDecision[][]) | undefined {
+  const first = decideThreeBet(gridHands[0][0], defender, opener, effectiveStackBB)
+  if (!first) return undefined
+  return gridHands.map((row) => row.map((hand) => decideThreeBet(hand, defender, opener, effectiveStackBB)!))
+}
+
+/** `undefined` if `opener`/`threeBettor` is a nonsensical position pairing (see `decideFourBet`). */
+export function fourBetGridDecisions(
+  opener: Position,
+  threeBettor: DefendingPosition,
+  effectiveStackBB: number,
+): (FourBetDecision[][]) | undefined {
+  const first = decideFourBet(gridHands[0][0], opener, threeBettor, effectiveStackBB)
+  if (!first) return undefined
+  return gridHands.map((row) => row.map((hand) => decideFourBet(hand, opener, threeBettor, effectiveStackBB)!))
 }
