@@ -35,6 +35,18 @@ export function Home({ onNavigate }: { onNavigate: (p: Page) => void }) {
       <section className="grid gap-4 sm:grid-cols-2">
         <button
           type="button"
+          onClick={() => onNavigate('trainer')}
+          className="rounded-lg border border-slate-200 bg-white p-5 text-left shadow-sm transition-shadow hover:shadow-md dark:border-slate-800 dark:bg-slate-900"
+        >
+          <h2 className="text-lg font-semibold">Preflop Trainer</h2>
+          <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
+            Random hand, random spot — fold, call, or raise? Graded against the same charts
+            as Preflop Ranges, with a one-line "why" after every answer.
+          </p>
+        </button>
+
+        <button
+          type="button"
           onClick={() => onNavigate('equity')}
           className="rounded-lg border border-slate-200 bg-white p-5 text-left shadow-sm transition-shadow hover:shadow-md dark:border-slate-800 dark:bg-slate-900"
         >

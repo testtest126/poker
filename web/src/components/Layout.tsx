@@ -3,6 +3,7 @@ import type { Page } from '../App'
 
 const NAV_ITEMS: { page: Page; label: string }[] = [
   { page: 'home', label: 'Home' },
+  { page: 'trainer', label: 'Trainer' },
   { page: 'equity', label: 'Equity Calculator' },
   { page: 'ranges', label: 'Preflop Ranges' },
   { page: 'icm', label: 'ICM Calculator' },
