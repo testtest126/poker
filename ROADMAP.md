@@ -67,7 +67,11 @@ anywhere.
    Kotlin Multiplatform, or compiling the TypeScript engine down for native
    use) is worth the complexity, versus keeping three independent,
    individually-simple codebases. Not decided yet — a real decision for
-   that future date, not today.
+   that future date, not today. See
+   [docs/adr/0001-mobile-platform-choice.md](docs/adr/0001-mobile-platform-choice.md)
+   for an honest comparison of Compose Multiplatform vs. React Native vs.
+   Flutter vs. native Kotlin for this project specifically — a reference
+   for that future decision, not a decision made now.
 
 The existing **iOS app** (`app/` + `PokerKit/`) keeps developing in
 parallel — it isn't being deprecated by the web effort. The two share no
