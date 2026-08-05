@@ -13,6 +13,6 @@ export default defineConfig({
   plugins: [react(), tailwindcss()],
   test: {
     environment: 'node',
-    include: ['src/engine/**/*.test.ts'],
+    include: ['src/engine/**/*.test.ts', 'src/lib/**/*.test.ts'],
   },
 })
