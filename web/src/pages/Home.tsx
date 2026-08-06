@@ -80,6 +80,18 @@ export function Home({ onNavigate }: { onNavigate: (p: Page) => void }) {
             Malmuth-Harville ICM, not a rule of thumb.
           </p>
         </button>
+
+        <button
+          type="button"
+          onClick={() => onNavigate('import')}
+          className="rounded-lg border border-slate-200 bg-white p-5 text-left shadow-sm transition-shadow hover:shadow-md dark:border-slate-800 dark:bg-slate-900"
+        >
+          <h2 className="text-lg font-semibold">Import Hand History</h2>
+          <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
+            Paste or drop a PokerStars .txt export — parsed entirely in your browser,
+            never uploaded anywhere.
+          </p>
+        </button>
       </section>
     </div>
   )

@@ -7,6 +7,7 @@ const NAV_ITEMS: { page: Page; label: string }[] = [
   { page: 'equity', label: 'Equity Calculator' },
   { page: 'ranges', label: 'Preflop Ranges' },
   { page: 'icm', label: 'ICM Calculator' },
+  { page: 'import', label: 'Import' },
 ]
 
 export function Layout({
