@@ -40,8 +40,8 @@ function CardView({ card }: { card: Card }) {
   const isRed = card.suit === 'hearts' || card.suit === 'diamonds'
   return (
     <div
-      className={`flex h-16 w-12 flex-col items-center justify-center rounded-md border border-slate-300 bg-white text-xl font-bold shadow-sm dark:border-slate-700 dark:bg-slate-900 ${
-        isRed ? 'text-rose-600' : 'text-slate-900 dark:text-slate-100'
+      className={`flex h-16 w-12 flex-col items-center justify-center rounded-sm border border-hairline bg-surface font-mono text-xl font-bold ${
+        isRed ? 'text-raise' : 'text-text-primary'
       }`}
     >
       <span>{rankSymbol(card.rank)}</span>
@@ -88,14 +88,13 @@ export function Trainer() {
   const accuracy = score.total > 0 ? Math.round((score.correct / score.total) * 100) : null
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Preflop Trainer</h1>
-        <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
-          Drills the same hand-tuned charts as Preflop Ranges — it grades you against those
-          charts, not against a solver. See{' '}
+        <h1 className="text-xl font-semibold tracking-tight text-text-primary">Preflop Trainer</h1>
+        <p className="mt-1 text-sm text-text-secondary">
+          Drills the same hand-tuned charts as Preflop Ranges — it grades you against those charts, not against a solver. See{' '}
           <a
-            className="underline hover:text-indigo-600 dark:hover:text-indigo-400"
+            className="underline decoration-hairline-strong underline-offset-2 transition-colors hover:text-text-primary"
             href="https://github.com/testtest126/poker/blob/main/ai-docs/RANGES.md"
             target="_blank"
             rel="noreferrer"
@@ -106,14 +105,12 @@ export function Trainer() {
         </p>
       </div>
 
-      <div className="flex flex-wrap gap-1.5">
+      <div className="flex flex-wrap gap-x-5 gap-y-1 border-b border-hairline text-sm">
         <button
           type="button"
           onClick={() => setModeFilter('mixed')}
-          className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
-            modeFilter === 'mixed'
-              ? 'bg-indigo-600 text-white'
-              : 'bg-slate-200 text-slate-700 hover:bg-slate-300 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700'
+          className={`border-b-2 py-2 font-medium transition-colors ${
+            modeFilter === 'mixed' ? 'border-accent-bright text-text-primary' : 'border-transparent text-text-secondary hover:text-text-primary'
           }`}
         >
           Mixed
@@ -123,10 +120,8 @@ export function Trainer() {
             key={m}
             type="button"
             onClick={() => setModeFilter(m)}
-            className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
-              modeFilter === m
-                ? 'bg-indigo-600 text-white'
-                : 'bg-slate-200 text-slate-700 hover:bg-slate-300 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700'
+            className={`border-b-2 py-2 font-medium transition-colors ${
+              modeFilter === m ? 'border-accent-bright text-text-primary' : 'border-transparent text-text-secondary hover:text-text-primary'
             }`}
           >
             {TRAINER_MODE_LABEL[m]}
@@ -134,40 +129,42 @@ export function Trainer() {
         ))}
       </div>
 
-      <div className="flex flex-wrap items-center gap-x-6 gap-y-1 text-sm text-slate-600 dark:text-slate-400">
-        <span>
-          Score: <span className="font-semibold tabular-nums text-slate-900 dark:text-slate-100">{score.correct}/{score.total}</span>
-          {accuracy !== null && <span className="ml-1 tabular-nums">({accuracy}%)</span>}
+      <div className="flex flex-wrap items-center gap-x-6 gap-y-1 text-sm">
+        <span className="text-text-secondary">
+          Score:{' '}
+          <span className="font-mono font-semibold tabular-nums text-text-primary">
+            {score.correct}/{score.total}
+          </span>
+          {accuracy !== null && <span className="ml-1 font-mono tabular-nums text-text-secondary">({accuracy}%)</span>}
         </span>
-        <span>
-          Streak: <span className="font-semibold tabular-nums text-slate-900 dark:text-slate-100">{streak}</span>
-          {bestStreak > 0 && <span className="ml-1 tabular-nums">(best {bestStreak})</span>}
+        <span className="text-text-secondary">
+          Streak: <span className="font-mono font-semibold tabular-nums text-text-primary">{streak}</span>
+          {bestStreak > 0 && <span className="ml-1 font-mono tabular-nums text-text-secondary">(best {bestStreak})</span>}
         </span>
       </div>
 
-      <div className="space-y-4 rounded-lg border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900">
-        <div className="text-xs font-medium text-slate-500">{TRAINER_MODE_LABEL[spot.mode]}</div>
+      <div className="space-y-4 rounded-sm border border-hairline bg-surface p-5">
+        <div className="text-xs font-medium text-text-tertiary">{TRAINER_MODE_LABEL[spot.mode]}</div>
 
         <div className="flex justify-center gap-2">
           <CardView card={spot.hand.first} />
           <CardView card={spot.hand.second} />
         </div>
 
-        <p className="text-center text-sm text-slate-700 dark:text-slate-300">{spotDescription(spot)}</p>
+        <p className="text-center text-sm text-text-secondary">{spotDescription(spot)}</p>
 
         <div className="flex flex-wrap justify-center gap-2">
           {TRAINER_MODE_ACTIONS[spot.mode].map((option) => {
             const isSelected = selected === option.action
             const isCorrectAnswer = option.action === spot.correctAction
-            let className =
-              'rounded-md px-4 py-2 text-sm font-semibold transition-colors bg-slate-200 text-slate-700 hover:bg-slate-300 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700'
+            let className = 'rounded-sm border border-hairline bg-surface-raised px-4 py-2 text-sm font-semibold text-text-secondary transition-colors hover:border-hairline-strong hover:text-text-primary'
             if (selected) {
               if (isCorrectAnswer) {
-                className = 'rounded-md px-4 py-2 text-sm font-semibold bg-emerald-600 text-white'
+                className = 'rounded-sm border border-accent bg-accent/20 px-4 py-2 text-sm font-semibold text-accent-bright'
               } else if (isSelected) {
-                className = 'rounded-md px-4 py-2 text-sm font-semibold bg-rose-600 text-white'
+                className = 'rounded-sm border border-raise bg-raise/20 px-4 py-2 text-sm font-semibold text-raise'
               } else {
-                className = 'rounded-md px-4 py-2 text-sm font-semibold bg-slate-100 text-slate-400 dark:bg-slate-800 dark:text-slate-500'
+                className = 'rounded-sm border border-hairline bg-surface px-4 py-2 text-sm font-semibold text-text-tertiary'
               }
             }
             return (
@@ -179,15 +176,15 @@ export function Trainer() {
         </div>
 
         {selected && (
-          <div className="space-y-3 border-t border-slate-200 pt-4 text-center dark:border-slate-800">
-            <p className={`text-sm font-semibold ${selected === spot.correctAction ? 'text-emerald-600' : 'text-rose-600'}`}>
+          <div className="space-y-3 border-t border-hairline pt-4 text-center">
+            <p className={`text-sm font-semibold ${selected === spot.correctAction ? 'text-accent-bright' : 'text-raise'}`}>
               {selected === spot.correctAction ? 'Correct' : `Not quite — the chart says ${TRAINER_MODE_ACTIONS[spot.mode].find((o) => o.action === spot.correctAction)?.label}`}
             </p>
-            <p className="text-sm text-slate-600 dark:text-slate-400">{spot.reasoning}</p>
+            <p className="text-sm text-text-secondary">{spot.reasoning}</p>
             <button
               type="button"
               onClick={() => dealNewSpot(modeFilter)}
-              className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-indigo-700"
+              className="rounded-sm bg-accent px-4 py-2 text-sm font-semibold text-text-primary transition-colors hover:bg-accent/80"
             >
               Next Hand
             </button>
