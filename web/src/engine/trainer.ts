@@ -110,14 +110,16 @@ function formatted(value: number): string {
   return value === Math.round(value) ? value.toFixed(0) : value.toFixed(1)
 }
 
-function callVsShoveReasoning(d: CallVsShoveDecision): string {
+/** Exported alongside the pushFold/opening reasoning functions so the Leak Finder can
+ * produce the same "why" text for real hands that the Trainer produces for drilled ones. */
+export function callVsShoveReasoning(d: CallVsShoveDecision): string {
   const pct = d.callPercentage.toFixed(0)
   return d.action === 'call'
     ? `Hand strength score ${formatted(d.handScore)} clears the call threshold of ${formatted(d.scoreThreshold)} (top ${pct}% of hands profitably call this shove).`
     : `Hand strength score ${formatted(d.handScore)} is below the call threshold of ${formatted(d.scoreThreshold)} (top ${pct}% of hands profitably call this shove).`
 }
 
-function openDefenseReasoning(d: OpenDefenseDecision): string {
+export function openDefenseReasoning(d: OpenDefenseDecision): string {
   const pct = d.totalDefensePercentage.toFixed(0)
   if (d.action === 'threeBet') {
     return `Hand strength score ${formatted(d.handScore)} clears the 3-bet threshold of ${formatted(d.threeBetThreshold)} within this ${pct}% total defense range.`
@@ -141,7 +143,7 @@ function threeBetReasoning(d: ThreeBetDecision): string {
   }
 }
 
-function fourBetReasoning(d: FourBetDecision): string {
+export function fourBetReasoning(d: FourBetDecision): string {
   switch (d.action) {
     case 'fourBetValue':
       return `Hand strength score ${formatted(d.handScore)} clears the value 4-bet threshold of ${formatted(d.valueThreshold)} (~${d.fourBetPercentage.toFixed(0)}% 4-bet range).`

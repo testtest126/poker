@@ -1,12 +1,15 @@
 import { useMemo, useState, type ChangeEvent, type DragEvent } from 'react'
 import { heroSawFlop, heroWonHand, parseHandHistory, type HandHistoryFile, type ParsedHand } from '../lib/handHistory'
 import { holeCardsNotation } from '../engine/holeCards'
+import { analyzeLeaks, type LeakReport, type LeakResult } from '../engine/leakFinder'
+import { TRAINER_MODE_LABEL } from '../engine/trainer'
 
 export function Import() {
   const [rawText, setRawText] = useState('')
   const [isDragging, setIsDragging] = useState(false)
 
   const file = useMemo<HandHistoryFile | null>(() => (rawText.trim() ? parseHandHistory(rawText) : null), [rawText])
+  const leakReport = useMemo<LeakReport | null>(() => (file ? analyzeLeaks(file.hands) : null), [file])
 
   function loadFile(f: File) {
     const reader = new FileReader()
@@ -75,12 +78,12 @@ export function Import() {
         />
       </div>
 
-      {file && <ParsedResults file={file} />}
+      {file && leakReport && <ParsedResults file={file} leakReport={leakReport} />}
     </div>
   )
 }
 
-function ParsedResults({ file }: { file: HandHistoryFile }) {
+function ParsedResults({ file, leakReport }: { file: HandHistoryFile; leakReport: LeakReport }) {
   if (file.hands.length === 0 && file.skipped.length === 0) {
     return <p className="text-sm text-slate-500">No PokerStars hands found in this text.</p>
   }
@@ -100,6 +103,8 @@ function ParsedResults({ file }: { file: HandHistoryFile }) {
 
       {file.skipped.length > 0 && <SkippedList skipped={file.skipped} />}
 
+      {file.hands.length > 0 && <LeakReportView report={leakReport} />}
+
       {file.hands.length > 0 && (
         <div className="overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-800">
           <table className="w-full text-left text-sm">
@@ -111,11 +116,12 @@ function ParsedResults({ file }: { file: HandHistoryFile }) {
                 <th className="px-3 py-2">Saw Flop</th>
                 <th className="px-3 py-2">Showdown</th>
                 <th className="px-3 py-2 text-right">Result</th>
+                <th className="px-3 py-2">vs Chart</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
-              {file.hands.map((hand) => (
-                <HandRow key={hand.handId} hand={hand} />
+              {file.hands.map((hand, i) => (
+                <HandRow key={hand.handId} hand={hand} leakResult={leakReport.results[i]} />
               ))}
             </tbody>
           </table>
@@ -125,7 +131,7 @@ function ParsedResults({ file }: { file: HandHistoryFile }) {
   )
 }
 
-function HandRow({ hand }: { hand: ParsedHand }) {
+function HandRow({ hand, leakResult }: { hand: ParsedHand; leakResult: LeakResult }) {
   const won = heroWonHand(hand)
   const resultClass = hand.heroNetChips === 0 ? 'text-slate-500' : won ? 'text-emerald-600' : 'text-rose-600'
   return (
@@ -139,7 +145,104 @@ function HandRow({ hand }: { hand: ParsedHand }) {
         {hand.heroNetChips > 0 ? '+' : ''}
         {hand.heroNetChips.toLocaleString()}
       </td>
+      <td className="whitespace-nowrap px-3 py-2">
+        {leakResult.covered ? (
+          <span
+            title={`${TRAINER_MODE_LABEL[leakResult.mode]}: chart says ${leakResult.correctAction}, hero ${leakResult.heroAction}`}
+            className={leakResult.isCorrect ? 'text-emerald-600' : 'text-rose-600'}
+          >
+            {leakResult.isCorrect ? '✓ correct' : '✗ leak'}
+          </span>
+        ) : (
+          <span title={leakResult.reason} className="text-slate-400">
+            — not covered
+          </span>
+        )}
+      </td>
     </tr>
+  )
+}
+
+function LeakReportView({ report }: { report: LeakReport }) {
+  return (
+    <div className="space-y-4 rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
+      <div>
+        <h2 className="text-lg font-semibold">Leak Report</h2>
+        <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
+          {report.coveredCount === 0
+            ? "None of these hands matched one of the six charted spots — nothing to grade yet."
+            : `${report.correctCount} of ${report.coveredCount} preflop decisions matched the chart (${((report.accuracy ?? 0) * 100).toFixed(0)}%).`}
+          {report.notCoveredCount > 0 && (
+            <span className="text-slate-500">
+              {' '}
+              {report.notCoveredCount} hand{report.notCoveredCount === 1 ? '' : 's'} weren't one of the six charted spots (e.g. multi-way
+              raised pots, out-of-range stacks) and aren't graded.
+            </span>
+          )}
+        </p>
+      </div>
+
+      {report.byMode.length > 0 && (
+        <div>
+          <span className="mb-1 block text-xs font-medium text-slate-500">By spot</span>
+          <div className="flex flex-wrap gap-2">
+            {report.byMode.map((m) => (
+              <div
+                key={m.mode}
+                className="rounded-md bg-slate-100 px-3 py-1.5 text-xs dark:bg-slate-800"
+              >
+                <span className="font-medium">{TRAINER_MODE_LABEL[m.mode]}</span>{' '}
+                <span className="tabular-nums text-slate-600 dark:text-slate-400">
+                  {m.correct}/{m.total} ({(m.accuracy * 100).toFixed(0)}%)
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {report.byPosition.length > 0 && (
+        <div>
+          <span className="mb-1 block text-xs font-medium text-slate-500">By position</span>
+          <div className="flex flex-wrap gap-2">
+            {report.byPosition.map((p) => (
+              <div
+                key={p.position}
+                className="rounded-md bg-slate-100 px-3 py-1.5 text-xs dark:bg-slate-800"
+              >
+                <span className="font-medium">{p.position}</span>{' '}
+                <span className="tabular-nums text-slate-600 dark:text-slate-400">
+                  {p.correct}/{p.total} ({(p.accuracy * 100).toFixed(0)}%)
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {report.misplayedHands.length > 0 && (
+        <div>
+          <span className="mb-1 block text-xs font-medium text-slate-500">
+            Most misplayed hands ({report.misplayedHands.length})
+          </span>
+          <ul className="space-y-2">
+            {report.misplayedHands.map((m) => (
+              <li key={m.handId} className="rounded-md border border-rose-200 bg-rose-50 p-2 text-xs dark:border-rose-900 dark:bg-rose-950">
+                <div className="font-semibold">
+                  #{m.handId} · {TRAINER_MODE_LABEL[m.mode]} · <span className="font-mono">{m.handNotation}</span>
+                </div>
+                <div className="mt-0.5 text-slate-600 dark:text-slate-400">{m.description}</div>
+                <div className="mt-0.5">
+                  Chart says <span className="font-semibold">{m.correctAction}</span> — hero{' '}
+                  <span className="font-semibold text-rose-700 dark:text-rose-400">{m.heroAction}</span>.{' '}
+                  {m.reasoning}
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
   )
 }
 
