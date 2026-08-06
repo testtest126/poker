@@ -4,6 +4,7 @@ import {
   callingGridDecisions,
   fourBetGridDecisions,
   GRID_RANKS,
+  gridNotation,
   openDefenseGridDecisions,
   openingGridDecisions,
   pushFoldGridDecisions,
@@ -106,13 +107,13 @@ export function RangeExplorer() {
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Preflop Ranges</h1>
-        <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
+        <h1 className="text-xl font-semibold tracking-tight text-text-primary">Preflop Ranges</h1>
+        <p className="mt-1 text-sm text-text-secondary">
           Hand-tuned study aids approximating published charts — not solver output. 3-Bet/4-Bet
           are a separate, more polarized opinion than Facing Open and will deliberately
           disagree with it on the same spot. See{' '}
           <a
-            className="underline hover:text-indigo-600 dark:hover:text-indigo-400"
+            className="underline decoration-hairline-strong underline-offset-2 transition-colors hover:text-text-primary"
             href="https://github.com/testtest126/poker/blob/main/ai-docs/RANGES.md"
             target="_blank"
             rel="noreferrer"
@@ -123,16 +124,14 @@ export function RangeExplorer() {
         </p>
       </div>
 
-      <div className="flex flex-wrap gap-1.5">
+      <div className="flex flex-wrap gap-x-5 gap-y-1 border-b border-hairline text-sm">
         {MODES.map((m) => (
           <button
             key={m.mode}
             type="button"
             onClick={() => handleModeChange(m.mode)}
-            className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
-              mode === m.mode
-                ? 'bg-indigo-600 text-white'
-                : 'bg-slate-200 text-slate-700 hover:bg-slate-300 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700'
+            className={`border-b-2 py-2 font-medium transition-colors ${
+              mode === m.mode ? 'border-accent-bright text-text-primary' : 'border-transparent text-text-secondary hover:text-text-primary'
             }`}
           >
             {m.label}
@@ -140,64 +139,58 @@ export function RangeExplorer() {
         ))}
       </div>
 
-      {modeConfig.layout === 'position' && (
-        <PositionPicker label="Position" value={position} onChange={setPosition} />
-      )}
-
-      {modeConfig.layout === 'defenderVsOpener' && (
+      <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_auto]">
         <div className="space-y-3">
-          <PositionPicker
-            label={mode === 'facingShove' ? 'Shover' : 'Opener'}
-            value={opponentPosition}
-            onChange={handleOpponentChange}
-          />
-          <DefendingPositionPicker
-            label="You"
-            value={heroPosition}
-            options={validDefendingPositions(opponentPosition)}
-            onChange={setHeroPosition}
-          />
-        </div>
-      )}
+          {modeConfig.layout === 'position' && <PositionPicker label="Position" value={position} onChange={setPosition} />}
 
-      {modeConfig.layout === 'openerVsThreeBettor' && (
-        <div className="space-y-3">
-          <PositionPicker label="You Opened" value={position} onChange={handleOpenerChange} />
-          <DefendingPositionPicker
-            label="3-Bettor"
-            value={heroPosition}
-            options={validDefendingPositions(position)}
-            onChange={setHeroPosition}
-          />
-        </div>
-      )}
+          {modeConfig.layout === 'defenderVsOpener' && (
+            <div className="space-y-3">
+              <PositionPicker label={mode === 'facingShove' ? 'Shover' : 'Opener'} value={opponentPosition} onChange={handleOpponentChange} />
+              <DefendingPositionPicker label="You" value={heroPosition} options={validDefendingPositions(opponentPosition)} onChange={setHeroPosition} />
+            </div>
+          )}
 
-      <div>
-        <div className="mb-1 flex justify-between text-xs font-medium text-slate-500">
-          <span>Effective Stack</span>
-          <span className="tabular-nums">{stack} bb</span>
+          {modeConfig.layout === 'openerVsThreeBettor' && (
+            <div className="space-y-3">
+              <PositionPicker label="You Opened" value={position} onChange={handleOpenerChange} />
+              <DefendingPositionPicker label="3-Bettor" value={heroPosition} options={validDefendingPositions(position)} onChange={setHeroPosition} />
+            </div>
+          )}
+
+          <div>
+            <div className="mb-1 flex justify-between text-xs font-medium text-text-tertiary">
+              <span>Effective Stack</span>
+              <span className="font-mono tabular-nums text-text-secondary">{stack}bb</span>
+            </div>
+            <input
+              type="range"
+              min={modeConfig.stackRange[0]}
+              max={modeConfig.stackRange[1]}
+              value={stack}
+              onChange={(e) => setStack(Number(e.target.value))}
+              className="w-full accent-accent"
+            />
+          </div>
         </div>
-        <input
-          type="range"
-          min={modeConfig.stackRange[0]}
-          max={modeConfig.stackRange[1]}
-          value={stack}
-          onChange={(e) => setStack(Number(e.target.value))}
-          className="w-full accent-indigo-600"
-        />
+
+        <div className="flex items-center gap-3 rounded-sm border border-hairline bg-surface px-4 py-3 sm:flex-col sm:items-end sm:justify-center sm:gap-0.5">
+          <span className="font-mono text-2xl font-semibold tabular-nums text-text-primary">{activePct}%</span>
+          <span className="text-xs text-text-tertiary">{summaryDetail(mode, decisions)}</span>
+        </div>
       </div>
 
-      <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">
-        {decisions.grid ? summaryText(mode, decisions, activePct) : "This position pairing can't happen at an unopened table."}
-      </p>
+      {!decisions.grid && <p className="text-sm font-medium text-text-secondary">This position pairing can't happen at an unopened table.</p>}
 
       {decisions.grid && (
         <>
           <div className="mx-auto max-w-xl">
-            <PreflopGridView cellClass={(row, col) => cellClass(decisions, row, col)} />
+            <PreflopGridView
+              cellClass={(row, col) => cellClass(mode, decisions, row, col)}
+              cellTooltip={(row, col) => cellTooltip(decisions, row, col)}
+            />
           </div>
 
-          <div className="flex flex-wrap gap-4 text-xs text-slate-500">{legend(mode)}</div>
+          <div className="flex flex-wrap gap-4 text-xs text-text-secondary">{legend(mode)}</div>
         </>
       )}
     </div>
@@ -214,47 +207,77 @@ function isActive(kind: DecisionKind, action: string): boolean {
   return action !== 'fold'
 }
 
-function cellClass(decisions: Decisions, row: number, col: number): string {
+function cellClass(mode: Mode, decisions: Decisions, row: number, col: number): string {
   const action = decisions.grid![row][col].action
-  const fold = 'bg-slate-100 text-slate-400 dark:bg-slate-800 dark:text-slate-500'
+  const fold = 'bg-surface text-text-tertiary'
   if (decisions.kind === 'single') {
-    return action === 'fold' ? fold : 'bg-indigo-600 text-white'
+    if (action === 'fold') return fold
+    return mode === 'facingShove' ? 'bg-call text-text-primary' : 'bg-raise text-text-primary'
   }
   if (decisions.kind === 'threeWay') {
-    if (action === 'threeBet') return 'bg-indigo-600 text-white'
-    if (action === 'call') return 'bg-teal-600 text-white'
+    if (action === 'threeBet') return 'bg-raise text-text-primary'
+    if (action === 'call') return 'bg-call text-text-primary'
     return fold
   }
   // polarized: value / bluff / call / fold
-  if (action === 'threeBetValue' || action === 'fourBetValue') return 'bg-indigo-600 text-white'
-  if (action === 'threeBetBluff' || action === 'fourBetBluff') return 'bg-purple-600 text-white'
-  if (action === 'call') return 'bg-teal-600 text-white'
+  if (action === 'threeBetValue' || action === 'fourBetValue') return 'bg-raise text-text-primary'
+  if (action === 'threeBetBluff' || action === 'fourBetBluff') return 'bg-bluff text-text-primary'
+  if (action === 'call') return 'bg-call text-text-primary'
   return fold
 }
 
-function summaryText(mode: Mode, decisions: Decisions, activePct: string): string {
-  const flat = decisions.grid!.flat()
+function actionLabel(action: string): string {
+  switch (action) {
+    case 'push':
+      return 'Push'
+    case 'raise':
+      return 'Raise'
+    case 'call':
+      return 'Call'
+    case 'threeBet':
+      return '3-Bet'
+    case 'threeBetValue':
+      return '3-Bet (value)'
+    case 'threeBetBluff':
+      return '3-Bet (bluff)'
+    case 'fourBetValue':
+      return '4-Bet (value)'
+    case 'fourBetBluff':
+      return '4-Bet (bluff)'
+    default:
+      return 'Fold'
+  }
+}
+
+function cellTooltip(decisions: Decisions, row: number, col: number): string {
+  const action = decisions.grid![row][col].action
+  return `${gridNotation(row, col)} · ${actionLabel(action)}`
+}
+
+function summaryDetail(mode: Mode, decisions: Decisions): string {
+  if (!decisions.grid) return ''
+  const flat = decisions.grid.flat()
   const total = flat.length
   switch (mode) {
     case 'pushFold':
-      return `${activePct}% of hands to shove`
+      return 'of hands to shove'
     case 'opening':
-      return `${activePct}% of hands to open`
+      return 'of hands to open'
     case 'facingShove':
-      return `${activePct}% of hands to call`
+      return 'of hands to call'
     case 'facingOpen': {
       const threeBetPct = ((flat.filter((d) => d.action === 'threeBet').length / total) * 100).toFixed(0)
-      return `${activePct}% of hands to defend (${threeBetPct}% 3-bet)`
+      return `to defend · ${threeBetPct}% 3-bet`
     }
     case 'threeBet': {
       const valuePct = ((flat.filter((d) => d.action === 'threeBetValue').length / total) * 100).toFixed(0)
       const bluffPct = ((flat.filter((d) => d.action === 'threeBetBluff').length / total) * 100).toFixed(0)
-      return `${activePct}% of hands to defend (${valuePct}% value, ${bluffPct}% bluff)`
+      return `to defend · ${valuePct}% value, ${bluffPct}% bluff`
     }
     case 'fourBet': {
       const valuePct = ((flat.filter((d) => d.action === 'fourBetValue').length / total) * 100).toFixed(0)
       const bluffPct = ((flat.filter((d) => d.action === 'fourBetBluff').length / total) * 100).toFixed(0)
-      return `${activePct}% of hands to continue (${valuePct}% value, ${bluffPct}% bluff)`
+      return `to continue · ${valuePct}% value, ${bluffPct}% bluff`
     }
   }
 }
@@ -262,42 +285,40 @@ function summaryText(mode: Mode, decisions: Decisions, activePct: string): strin
 function legend(mode: Mode) {
   const swatch = (colorClass: string, label: string) => (
     <div key={label} className="flex items-center gap-1.5">
-      <span className={`h-3 w-3 rounded-sm border border-slate-300 dark:border-slate-700 ${colorClass}`} />
+      <span className={`h-2.5 w-2.5 rounded-[2px] border border-hairline-strong ${colorClass}`} />
       {label}
     </div>
   )
-  const fold = swatch('bg-slate-100 dark:bg-slate-800', 'Fold')
+  const fold = swatch('bg-surface', 'Fold')
   switch (mode) {
     case 'pushFold':
-      return [swatch('bg-indigo-600', 'Shove'), fold]
+      return [swatch('bg-raise', 'Shove'), fold]
     case 'opening':
-      return [swatch('bg-indigo-600', 'Raise'), fold]
+      return [swatch('bg-raise', 'Raise'), fold]
     case 'facingShove':
-      return [swatch('bg-indigo-600', 'Call'), fold]
+      return [swatch('bg-call', 'Call'), fold]
     case 'facingOpen':
-      return [swatch('bg-indigo-600', '3-Bet'), swatch('bg-teal-600', 'Call'), fold]
+      return [swatch('bg-raise', '3-Bet'), swatch('bg-call', 'Call'), fold]
     case 'threeBet':
-      return [swatch('bg-indigo-600', '3-Bet Value'), swatch('bg-purple-600', '3-Bet Bluff'), swatch('bg-teal-600', 'Call'), fold]
+      return [swatch('bg-raise', '3-Bet Value'), swatch('bg-bluff', '3-Bet Bluff'), swatch('bg-call', 'Call'), fold]
     case 'fourBet':
-      return [swatch('bg-indigo-600', '4-Bet Value'), swatch('bg-purple-600', '4-Bet Bluff'), swatch('bg-teal-600', 'Call'), fold]
+      return [swatch('bg-raise', '4-Bet Value'), swatch('bg-bluff', '4-Bet Bluff'), swatch('bg-call', 'Call'), fold]
   }
 }
 
 function PositionPicker({ label, value, onChange }: { label: string; value: Position; onChange: (p: Position) => void }) {
   return (
     <div>
-      <span className="mb-1 block text-xs font-medium text-slate-500">{label}</span>
-      <div className="flex flex-wrap gap-1.5">
+      <span className="mb-1 block text-xs font-medium text-text-tertiary">{label}</span>
+      <div className="inline-flex flex-wrap gap-px overflow-hidden rounded-sm border border-hairline bg-hairline">
         {POSITIONS.map((p) => (
           <button
             key={p}
             type="button"
             title={POSITION_FULL_NAME[p]}
             onClick={() => onChange(p)}
-            className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
-              value === p
-                ? 'bg-indigo-600 text-white'
-                : 'bg-slate-200 text-slate-700 hover:bg-slate-300 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700'
+            className={`px-3 py-1.5 font-mono text-sm font-medium transition-colors ${
+              value === p ? 'bg-accent text-text-primary' : 'bg-surface text-text-secondary hover:bg-surface-raised hover:text-text-primary'
             }`}
           >
             {p}
@@ -321,18 +342,16 @@ function DefendingPositionPicker({
 }) {
   return (
     <div>
-      <span className="mb-1 block text-xs font-medium text-slate-500">{label}</span>
-      <div className="flex flex-wrap gap-1.5">
+      <span className="mb-1 block text-xs font-medium text-text-tertiary">{label}</span>
+      <div className="inline-flex flex-wrap gap-px overflow-hidden rounded-sm border border-hairline bg-hairline">
         {options.map((p) => (
           <button
             key={p}
             type="button"
             title={DEFENDING_POSITION_FULL_NAME[p]}
             onClick={() => onChange(p)}
-            className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
-              value === p
-                ? 'bg-indigo-600 text-white'
-                : 'bg-slate-200 text-slate-700 hover:bg-slate-300 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700'
+            className={`px-3 py-1.5 font-mono text-sm font-medium transition-colors ${
+              value === p ? 'bg-accent text-text-primary' : 'bg-surface text-text-secondary hover:bg-surface-raised hover:text-text-primary'
             }`}
           >
             {p}

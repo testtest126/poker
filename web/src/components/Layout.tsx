@@ -20,26 +20,27 @@ export function Layout({
   children: ReactNode
 }) {
   return (
-    <div className="flex min-h-screen flex-col bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
-      <header className="border-b border-slate-200 dark:border-slate-800">
-        <div className="mx-auto flex max-w-4xl flex-wrap items-center gap-x-6 gap-y-2 px-4 py-3">
+    <div className="flex min-h-screen flex-col bg-canvas font-sans text-text-primary">
+      <header className="border-b border-hairline bg-surface">
+        <div className="mx-auto flex max-w-4xl flex-wrap items-center gap-x-8 gap-y-1 px-4">
           <button
             type="button"
             onClick={() => onNavigate('home')}
-            className="text-lg font-semibold tracking-tight text-indigo-600 dark:text-indigo-400"
+            className="flex items-center gap-2 py-3 text-[13px] font-semibold tracking-[0.08em] text-text-primary"
           >
-            Poker Study
+            <span className="h-1.5 w-1.5 rounded-full bg-accent-bright" aria-hidden="true" />
+            POKER STUDY
           </button>
-          <nav className="flex flex-wrap gap-1">
+          <nav className="flex flex-wrap gap-6 text-sm">
             {NAV_ITEMS.map((item) => (
               <button
                 key={item.page}
                 type="button"
                 onClick={() => onNavigate(item.page)}
-                className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
+                className={`border-b-2 py-3 font-medium transition-colors ${
                   page === item.page
-                    ? 'bg-indigo-600 text-white'
-                    : 'text-slate-600 hover:bg-slate-200 dark:text-slate-300 dark:hover:bg-slate-800'
+                    ? 'border-accent-bright text-text-primary'
+                    : 'border-transparent text-text-secondary hover:text-text-primary'
                 }`}
               >
                 {item.label}
@@ -51,15 +52,10 @@ export function Layout({
 
       <main className="mx-auto w-full max-w-4xl flex-1 px-4 py-6">{children}</main>
 
-      <footer className="border-t border-slate-200 px-4 py-4 text-center text-xs text-slate-500 dark:border-slate-800 dark:text-slate-500">
+      <footer className="border-t border-hairline px-4 py-4 text-center text-xs text-text-tertiary">
         Free, open source, no account. A GTO-informed preflop/equity/ICM trainer — not a
         postflop solver, and not implying to be one. See{' '}
-        <a
-          className="underline hover:text-indigo-600 dark:hover:text-indigo-400"
-          href="https://github.com/testtest126/poker/blob/main/ROADMAP.md"
-          target="_blank"
-          rel="noreferrer"
-        >
+        <a className="underline transition-colors hover:text-text-secondary" href="https://github.com/testtest126/poker/blob/main/ROADMAP.md" target="_blank" rel="noreferrer">
           ROADMAP.md
         </a>
         .

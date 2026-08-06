@@ -1,4 +1,35 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap");
 @import "tailwindcss";
+
+/* Solver-grade design tokens — dark, dense, professional. Applied unconditionally (no
+ * light-mode variant) to the app shell (Layout.tsx) and the flagship Preflop Ranges page;
+ * every other page still runs on the original light/dark Tailwind palette until it gets
+ * reskinned in a later phase. See ROADMAP.md for the phased rollout. */
+@theme {
+  --color-canvas: #0a0b0d;
+  --color-surface: #131417;
+  --color-surface-raised: #1b1d21;
+  --color-hairline: #26282e;
+  --color-hairline-strong: #34363d;
+
+  --color-text-primary: #e9eaec;
+  --color-text-secondary: #9498a1;
+  --color-text-tertiary: #63666f;
+
+  /* Brand/chrome accent — deep felt green + a crisp highlight for active/focus states.
+   * Deliberately a different hue family from every action color below, so nav/button
+   * "brand" green is never confused with the grid's "call" color. */
+  --color-accent: #1b8a5a;
+  --color-accent-bright: #4ade80;
+
+  /* Solver-style action color-coding — one hue family per action, fold left neutral. */
+  --color-raise: #c24b3f;
+  --color-call: #3e7cb1;
+  --color-bluff: #8b7bc7;
+
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "SF Pro Text", "Segoe UI", sans-serif;
+  --font-mono: ui-monospace, "SF Mono", "Cascadia Code", "Segoe UI Mono", Consolas, monospace;
+}
 
 :root {
   color-scheme: light dark;
